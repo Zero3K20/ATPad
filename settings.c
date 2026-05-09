@@ -22,6 +22,7 @@
 #include <windowsx.h>
 #include <commctrl.h>
 #include <richedit.h>
+#include <strsafe.h>
 #include "stringconstants.h"
 #include "globalvars.h"
 #include "numericconstants.h"
@@ -144,7 +145,7 @@ static BOOL Settings_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 	g_TempTabsColor = g_TabsColor;
 	g_TempSpaceColor = g_SpaceColor;
 	g_TempBMColor = g_BMColor;
-	wcscpy(g_sTempDefBrowser, g_sDefBrowser);
+	StringCchCopyW(g_sTempDefBrowser, ARRAYSIZE(g_sTempDefBrowser), g_sDefBrowser);
 	m_TempTextFont = CreateFontIndirectW(&g_TempTextAreaFormat.lf);
 	GetTextHeight(hwnd, &m_TempTextHeight, m_TempTextFont);
 	m_TempLinesFont = CreateFontIndirectW(&g_TempLineNumbersFormat.lf);
@@ -167,8 +168,8 @@ static BOOL Settings_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 static void LoadAppearance(void){
 	wchar_t			szLang[MAX_PATH];
 
-	wcscpy(szLang, g_Paths.sLangDir);
-	wcscat(szLang, g_Paths.sLangFile);
+	StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+	StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 
 	CheckDlgButton(m_hEditor, IDC_CHK_SHOW_LN, g_TempSettings.showLines ? TRUE : FALSE);
 	EnableLineNumbersControls(g_TempSettings.showLines);
@@ -187,8 +188,8 @@ static void LoadAppearance(void){
 static void LoadPrefs(void){
 	wchar_t			szLang[MAX_PATH];
 
-	wcscpy(szLang, g_Paths.sLangDir);
-	wcscat(szLang, g_Paths.sLangFile);
+	StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+	StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 	
 	SendDlgItemMessageW(m_hPrefs, IDC_UPD_TAB_WIDTH, UDM_SETPOS, 0, MAKELONG(g_TempSettings.tabWidth, 0));
 	CheckDlgButton(m_hPrefs, IDC_CHK_SINGLE_INST, g_TempSettings.singleInstance ? BST_CHECKED : BST_UNCHECKED);
@@ -235,8 +236,8 @@ static void AddTabs(HWND hwnd){
 	TCITEMW			ti;
 	wchar_t			szLang[MAX_PATH], szBuffer[128];
 
-	wcscpy(szLang, g_Paths.sLangDir);
-	wcscat(szLang, g_Paths.sLangFile);
+	StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+	StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 
 	ZeroMemory(&ti, sizeof(ti));
 	ti.mask = TCIF_TEXT;
@@ -852,7 +853,7 @@ static void SetDefaults(HWND hwnd){
 	ZeroMemory(&g_TempTextAreaFormat.lf, sizeof(LOGFONTW));
 	g_TempTextAreaFormat.fontHeight = 10;
 	g_TempTextAreaFormat.lf.lfWeight = FW_NORMAL;
-	wcscpy(g_TempTextAreaFormat.lf.lfFaceName, L"Lucida Console");
+	StringCchCopyW(g_TempTextAreaFormat.lf.lfFaceName, ARRAYSIZE(g_TempTextAreaFormat.lf.lfFaceName), L"Lucida Console");
 	g_TempTextAreaFormat.lf.lfHeight = -MulDiv(g_TempTextAreaFormat.fontHeight, GetDeviceCaps(hdc, LOGPIXELSY), 72);
 	if(m_TempTextFont)
 		DeleteObject(m_TempTextFont);
@@ -871,7 +872,7 @@ static void SetDefaults(HWND hwnd){
 	ZeroMemory(&g_TempLineNumbersFormat.lf, sizeof(LOGFONTW));
 	g_TempLineNumbersFormat.fontHeight = 8;
 	g_TempLineNumbersFormat.lf.lfWeight = FW_NORMAL;
-	wcscpy(g_TempLineNumbersFormat.lf.lfFaceName, L"Lucida Console");
+	StringCchCopyW(g_TempLineNumbersFormat.lf.lfFaceName, ARRAYSIZE(g_TempLineNumbersFormat.lf.lfFaceName), L"Lucida Console");
 	g_TempLineNumbersFormat.lf.lfHeight = -MulDiv(g_TempLineNumbersFormat.fontHeight, GetDeviceCaps(hdc, LOGPIXELSY), 72);
 	if(m_TempLinesFont)
 		DeleteObject(m_TempLinesFont);
@@ -1230,5 +1231,3 @@ UINT APIENTRY CFHookProc(HWND hdlg,	UINT uiMsg,	WPARAM wParam, LPARAM lParam){
 	}
 	return 0;
 }
-
-

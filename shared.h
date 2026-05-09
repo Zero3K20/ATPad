@@ -1,6 +1,7 @@
 #ifndef __SHARED_H__
 #define __SHARED_H__
 
+#include <stddef.h>
 #include <commctrl.h>
 #include "menu.h"
 
@@ -11,8 +12,8 @@ BOOL IsBitOn(int data, int position);
 void ShowPopUp(HWND hwnd, HMENU hMenu);
 void SetMenuText(int id, const wchar_t * lcpSection, const wchar_t * lcpFile, wchar_t * lpDefault, wchar_t * lpBuffer);
 void SetMIText(MItem * lpMI, const int size, int id, const wchar_t * lpText);
-void GetMIText(MItem * lpMI, const int size, int id, wchar_t * lpText);
-void GetTooltip(wchar_t * lpTip, PMItem pItems, int size, UINT id);
+void GetMIText(MItem * lpMI, const int size, int id, wchar_t * lpText, size_t cchText);
+void GetTooltip(wchar_t * lpTip, size_t cchTip, PMItem pItems, int size, UINT id);
 void SetControlText(HWND hwnd, int id, wchar_t * lpDefault, wchar_t * lpLangFile);
 void DrawComboItem(const DRAWITEMSTRUCT * lpDrawItem);
 void AddWrapBitmap(BOOL fReplace, GCOLORTYPE gct, HIMAGELIST iml);

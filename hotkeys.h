@@ -1,6 +1,8 @@
 #ifndef __HOTKEYS_H__
 #define __HOTKEYS_H__
 
+#include <stddef.h>
+
 #ifndef VK_0
 #define VK_0 0x30
 #define VK_1 0x31
@@ -44,7 +46,7 @@
 #endif
 
 /** Prototypes ********************************************************/
-int GetModifiers(wchar_t * lpID);
-int GetOtherKey(wchar_t * lpKey);
-ACCEL * GetAccString(ACCEL * pAcc, int size, int id, wchar_t * lpAcc);
+int GetModifiers(wchar_t * lpID, size_t cchID);
+int GetOtherKey(wchar_t * lpKey, size_t cchKey);
+ACCEL * GetAccString(ACCEL * pAcc, int size, int id, wchar_t * lpAcc, size_t cchAcc);
 #endif	// HOTKEYS_H__

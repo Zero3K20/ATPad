@@ -25,6 +25,7 @@
 #include <commctrl.h>
 #include <richedit.h>
 #include <stdlib.h>
+#include <strsafe.h>
 
 #include "horsplit.h"
 #include "main.h"
@@ -146,8 +147,8 @@ static LRESULT CALLBACK HSplit_WndProc (HWND hwnd, UINT msg, WPARAM wParam, LPAR
 		case TBNPM_INSERT_ASS_TAB:{
 			wchar_t		szLang[MAX_PATH];
 
-			wcscpy(szLang, g_Paths.sLangDir);
-			wcscat(szLang, g_Paths.sLangFile);
+			StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+			StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 			InsertTab(wParam, szLang, lParam);
 			return TRUE;
 		}
@@ -196,12 +197,12 @@ static LRESULT CALLBACK HSplit_WndProc (HWND hwnd, UINT msg, WPARAM wParam, LPAR
 		case TBNPM_INS_RES_STR:{
 			wchar_t			szBuffer[1024], szNumber[12];
 
-			wcscpy(szBuffer, g_Strings.sTotalFound);
-			wcscat(szBuffer, L" \"");
-			wcscat(szBuffer, g_SearchString);
-			wcscat(szBuffer, L"\": ");
+			StringCchCopyW(szBuffer, ARRAYSIZE(szBuffer), g_Strings.sTotalFound);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L" \"");
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), g_SearchString);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L"\": ");
 			_ltow(wParam, szNumber, 10);
-			wcscat(szBuffer, szNumber);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), szNumber);
 			SendMessageW(m_hListFind, LB_INSERTSTRING, 0, (LPARAM)szBuffer);
 			return TRUE;
 		}
@@ -211,21 +212,21 @@ static LRESULT CALLBACK HSplit_WndProc (HWND hwnd, UINT msg, WPARAM wParam, LPAR
 			int				index, count;
 
 			p = (P_FRC_ITEM)lParam;
-			wcscpy(szBuffer, L"\"");
-			wcscat(szBuffer, (wchar_t *)wParam);
-			wcscat(szBuffer, L"\" (");
+			StringCchCopyW(szBuffer, ARRAYSIZE(szBuffer), L"\"");
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), (wchar_t *)wParam);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L"\" (");
 			_ltow(p->row, szNumber, 10);
-			wcscat(szBuffer, szNumber);
-			wcscat(szBuffer, L", ");
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), szNumber);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L", ");
 			_ltow(p->col, szNumber, 10);
-			wcscat(szBuffer, szNumber);
-			wcscat(szBuffer, L")");
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), szNumber);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L")");
 			*szLine = MAX_LINE_SIZE;
 			count = SendMessageW(p->hEdit, EM_GETLINE, SendMessageW(p->hEdit, EM_EXLINEFROMCHAR, 0, p->min), (LPARAM)szLine);
 			if(szLine[count - 1] == '\r' || szLine[count - 1] == '\n')
 				szLine[count - 1] = '\0';
-			wcscat(szBuffer, L"\t");
-			wcscat(szBuffer, szLine);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L"\t");
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), szLine);
 			index = SendMessageW(m_hListFind, LB_ADDSTRING, 0, (LPARAM)szBuffer);
 			SendMessageW(m_hListFind, LB_SETITEMDATA, index, (LPARAM)p);
 			return TRUE;
@@ -343,19 +344,19 @@ static LRESULT CALLBACK PlaceHolder_WndProc (HWND hwnd, UINT msg, WPARAM wParam,
 			case IDM_DEL_SNIPPET:
 			case IDM_INS_SNIPPET:
 			case IDM_EDIT_SNIPPET:
-				GetTooltip(szTooltip, m_AssMenus, NELEMS(m_AssMenus), lpnmhdr->idFrom);
+				GetTooltip(szTooltip, ARRAYSIZE(szTooltip), m_AssMenus, NELEMS(m_AssMenus), lpnmhdr->idFrom);
 				ttp = (TOOLTIPTEXTW *)lParam;
-				wcscpy(ttp->szText, szTooltip);
+				StringCchCopyW(ttp->szText, ARRAYSIZE(ttp->szText), szTooltip);
 				break;
 			case IDM_CLOSE_PANE:{
 				wchar_t		szLang[MAX_PATH], szId[32];
 				
 				_itow(lpnmhdr->idFrom, szId, 10);
-				wcscpy(szLang, g_Paths.sLangDir);
-				wcscat(szLang, g_Paths.sLangFile);
+				StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+				StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 				GetPrivateProfileStringW(S_MENU, szId, L"Close", szTooltip, 128, szLang);
 				ttp = (TOOLTIPTEXTW *)lParam;
-				wcscpy(ttp->szText, szTooltip);
+				StringCchCopyW(ttp->szText, ARRAYSIZE(ttp->szText), szTooltip);
 				break;
 			}
 			}	
@@ -483,9 +484,9 @@ static BOOL PlaceHolder_OnCreate(HWND hwnd, LPCREATESTRUCT lpCreateStruct)
 	lvc.pszText = szBuffer;
 
 	lvc.cx = 240;
-	wcscpy(szBuffer, L"Name");
+	StringCchCopyW(szBuffer, ARRAYSIZE(szBuffer), L"Name");
 	SendMessageW(m_hListSnippets, LVM_INSERTCOLUMNW, 0, (LPARAM)&lvc);
-	wcscpy(szBuffer, L"Text");
+	StringCchCopyW(szBuffer, ARRAYSIZE(szBuffer), L"Text");
 	lvc.iSubItem = 1;
 	lvc.cx = 480;
 	SendMessageW(m_hListSnippets, LVM_INSERTCOLUMNW, 1, (LPARAM)&lvc);
@@ -603,8 +604,8 @@ void ApplyPaneLanguage(void){
 	int			count;
 	wchar_t		szLang[MAX_PATH], szBuffer[256], szID[12];
 
-	wcscpy(szLang, g_Paths.sLangDir);
-	wcscat(szLang, g_Paths.sLangFile);
+	StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+	StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 	count = TabCtrl_GetItemCount(m_hTabHSplit);
 	ZeroMemory(&ti, sizeof(ti));
 	ti.mask = TCIF_TEXT | TCIF_PARAM;
@@ -676,7 +677,7 @@ static void PrepareAssMenuRecursive(HMENU hMenu, wchar_t * lpLangFile){
 				PrepareAssMenuRecursive(mi.hSubMenu, lpLangFile);
 			}
 
-			GetMIText(m_AssMenus, NELEMS(m_AssMenus), mi.wID, szDefault);
+			GetMIText(m_AssMenus, NELEMS(m_AssMenus), mi.wID, szDefault, ARRAYSIZE(szDefault));
 			SetMenuText(mi.wID, S_MENU, lpLangFile, szDefault, szText);
 			SetMIText(m_AssMenus, NELEMS(m_AssMenus), mi.wID, szText);
 			pmi = GetMItem(m_AssMenus, NELEMS(m_AssMenus), mi.wID);
@@ -788,8 +789,8 @@ static BOOL Snippets_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 	LVITEMW			lvi;
 	int				size;
 
-	wcscpy(szLang, g_Paths.sLangDir);
-	wcscat(szLang, g_Paths.sLangFile);
+	StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+	StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 	GetPrivateProfileStringW(S_CONTROLS, L"1009", L"Add/Edit Snippet", szBuffer, 128, szLang);
 	SetWindowTextW(hwnd, szBuffer);
 	SetControlText(hwnd, IDOK, L"OK", szLang);

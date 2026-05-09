@@ -23,6 +23,7 @@
 #include <windowsx.h>
 #include <commdlg.h>
 #include <richedit.h>
+#include <strsafe.h>
 
 #include "stringconstants.h"
 #include "numericconstants.h"
@@ -109,7 +110,7 @@ void PrintEdit(P_TPEDIT pE){
 
 		ZeroMemory(&lf, sizeof(lf));
 		lf.lfHeight = -MulDiv(10, GetDeviceCaps(hPrintDC, LOGPIXELSY), 72);
-		wcscpy(lf.lfFaceName, FONT_NP);
+		StringCchCopyW(lf.lfFaceName, ARRAYSIZE(lf.lfFaceName), FONT_NP);
 		hFontPageNumber = CreateFontIndirectW(&lf);
 
 		yNP = GetDeviceCaps(hPrintDC, VERTRES);
@@ -122,7 +123,7 @@ void PrintEdit(P_TPEDIT pE){
 
 		ZeroMemory(&docinfo, sizeof(docinfo));
 		docinfo.cbSize = sizeof(docinfo);
-		wcscpy(szDocName, pE->szLongName);
+		StringCchCopyW(szDocName, ARRAYSIZE(szDocName), pE->szLongName);
 		docinfo.lpszDocName = szDocName;
 
 		StartDocW(hPrintDC, &docinfo);
@@ -317,4 +318,3 @@ void InitPrintMembers(void){
 	// }
 	SetPaper();
 }
-

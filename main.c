@@ -63,6 +63,8 @@
 
 #define NELEMS(a)  (sizeof(a) / sizeof((a)[0]))
 #define INRANGE(a, b, c)	((a >= b && a <= c) ? ((c > b) ? (0) : (2)) : ((a < b) ? -1 : 1))
+#define wcscpy(d, s) StringCchCopyW((d), ARRAYSIZE(d), (s))
+#define wcscat(d, s) StringCchCatW((d), ARRAYSIZE(d), (s))
 
 /** Prototypes **************************************************************/
 
@@ -117,8 +119,8 @@ static void ClearWindowMenu(void);
 static void RecreateWindowMenu(void);
 static void CheckWindowMenu(HMENU hMenu, int id);
 static BOOL OSFileDialog(wchar_t * lpCaption, wchar_t * lpNameFull, wchar_t * lpNameShort, BOOL fOpen, BOOL fUntitled);
-static void GetShortName(int index, wchar_t * lpName, BOOL fWithStar);
-static void GetLongName(int index, wchar_t * lpName);
+static void GetShortName(int index, wchar_t * lpName, size_t cchName, BOOL fWithStar);
+static void GetLongName(int index, wchar_t * lpName, size_t cchName);
 static void CloseTab(P_TPEDIT pE);
 static DWORD CALLBACK ReadStreamCallback(DWORD dwCookie, LPBYTE pbBuff, LONG cb, LONG FAR *pcb);
 static DWORD CALLBACK WriteStreamCallback(DWORD dwCookie, LPBYTE pbBuff, LONG cb, LONG FAR *pcb);
@@ -126,7 +128,7 @@ static BOOL LoadFile(wchar_t * lpPath, P_TPEDIT pE);
 static LRESULT CALLBACK OFNParentProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static UINT_PTR CALLBACK OFNHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
 static BOOL SaveFile(wchar_t * lpLongName, P_TPEDIT pE);
-static void GetFileNameFromPath(wchar_t * lpPath, wchar_t * lpName);
+static void GetFileNameFromPath(wchar_t * lpPath, wchar_t * lpName, size_t cchName);
 static void SaveAll(void);
 static BOOL SaveAllOnExit(BOOL fCloseTab);
 static void PrintCurrentPosition(int x, int y);
@@ -140,7 +142,7 @@ static void StoreBookmarks(wchar_t * lpSection, P_TPEDIT pE);
 static void LoadRecentFiles(void);
 static void AddToRecentFiles(P_TPEDIT pE, BOOL fAddToMenu);
 static BOOL IsRecentInList(wchar_t * lpPath);
-static void GetRecentPath(int id, wchar_t * lpPath);
+static void GetRecentPath(int id, wchar_t * lpPath, size_t cchPath);
 static int ShiftRecentFilesUp(void);
 static P_TPEDIT LoadDocument(HWND hMain, wchar_t * lpNameFull, wchar_t * lpNameShort, P_TPEDIT pE, BOOL fAddTab);
 static void CheckForOuterChanges(void);
@@ -156,7 +158,7 @@ static void LoadLastSession(HWND hMain);
 static void RemoveFromLastSession(wchar_t * lpPath);
 static void AddToLastSession(wchar_t * lpPath, P_TPEDIT pE);
 static void RecreateLastSession(void);
-static void GetTempSaveName(wchar_t * lpLongName, wchar_t * lpTempSave, BOOL fGetExtension);
+static void GetTempSaveName(wchar_t * lpLongName, wchar_t * lpTempSave, size_t cchTempSave, BOOL fGetExtension);
 static HICON GetSmallIcon(int index);
 static void GetAppSmallIcon(void);
 static void SetSmallIcon(P_TPEDIT pE, wchar_t * lpPath);
@@ -208,7 +210,7 @@ static HMENU ClearRefreshMenu(void);
 static void BuildRefreshMenu(HMENU hMenu);
 static void AddBookmarksToRecentLast(wchar_t * lpSection, wchar_t * lpKeyFixed, wchar_t * lpKeyRemovable, wchar_t * lpValue, wchar_t * lpPath);
 static void AddValueToRecentLast(wchar_t * lpSection, wchar_t * lpKey, wchar_t * lpValueFixed, wchar_t * lpValueRemovable, wchar_t * lpPath);
-static void ConstructINIKey(wchar_t * lpPath, wchar_t * lpLongName);
+static void ConstructINIKey(wchar_t * lpPath, size_t cchPath, wchar_t * lpLongName);
 static void GetLanguageID(void);
 static BOOL IsAccPrepared(void);
 static void CopyDefAccelerators(void);
@@ -572,7 +574,7 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 		//load document if needed
 		wchar_t		szPathShort[MAX_PATH];
 		P_TPEDIT 	pE = GetActiveHandle();
-		GetFileNameFromPath(szLoadPath, szPathShort);
+		GetFileNameFromPath(szLoadPath, szPathShort, ARRAYSIZE(szPathShort));
 		wcscpy(pE->szLongName, szLoadPath);
 		wcscpy(pE->szShortName, szPathShort);
 		LoadDocument(g_hMain, szLoadPath, szPathShort, pE, FALSE);
@@ -655,12 +657,12 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 		StringCchCopyA((char *)lParam, UPDM_FILE_SIZE, "/version.txt");
 		return TRUE;
 	case TBNPM_GET_MENU_TXT:
-		GetMIText(m_MainMenus, NELEMS(m_MainMenus), wParam, (wchar_t *)lParam);
+		GetMIText(m_MainMenus, NELEMS(m_MainMenus), wParam, (wchar_t *)lParam, 128);
 		return TRUE;
 	case TBNPM_GET_ACC:{
 		ACCEL				*pAcc;
 		P_TP_TEMPACCEL		pTmp = (P_TP_TEMPACCEL)lParam;
-		pAcc = GetAccString(m_pAcc, m_AccCount, pTmp->acc.cmd, pTmp->text);
+		pAcc = GetAccString(m_pAcc, m_AccCount, pTmp->acc.cmd, pTmp->text, ARRAYSIZE(pTmp->text));
 		if(pAcc){
 			pTmp->acc.fVirt = pAcc->fVirt;
 			pTmp->acc.key = pAcc->key;
@@ -708,7 +710,7 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 		//file path was saved as global atom
 		GlobalGetAtomNameW((ATOM)lParam, szLoadPath, MAX_PATH);
 		DeleteAtom((ATOM)lParam);
-		GetFileNameFromPath(szLoadPath, szPathShort);
+		GetFileNameFromPath(szLoadPath, szPathShort, ARRAYSIZE(szPathShort));
 		LoadDocument(hwnd, szLoadPath, szPathShort, NULL, TRUE);
 		RedrawWindow(m_hTabMain, NULL, NULL, RDW_INVALIDATE);
 		return TRUE;
@@ -842,7 +844,7 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 				wchar_t			szTooltip[128];
 				TOOLTIPTEXTW 	* ttp;
 				
-				GetTooltip(szTooltip, m_MainMenus, NELEMS(m_MainMenus), lpnm->idFrom);
+				GetTooltip(szTooltip, ARRAYSIZE(szTooltip), m_MainMenus, NELEMS(m_MainMenus), lpnm->idFrom);
 				ttp = (TOOLTIPTEXTW *)lParam;
 				wcscpy(ttp->szText, szTooltip);
 			}
@@ -858,7 +860,7 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 				index = TabCtrl_HitTest(m_hTabMain, &tch);
 				if(index >= 0){
 					lpnmtdi->lpszText = szBuffer;
-					GetLongName(index, szBuffer);
+					GetLongName(index, szBuffer, ARRAYSIZE(szBuffer));
 				}
 			}
 			return TRUE;
@@ -936,7 +938,7 @@ static void Main_OnDropFiles(HWND hwnd, HDROP hdrop)
 		//check whether really file is dropped (not directory etc)
 		if(IsFileDropped(szNameFull)){
 			wcscpy(szNameShort, szNameFull);
-			GetFileNameFromPath(szNameFull, szNameShort);
+			GetFileNameFromPath(szNameFull, szNameShort, ARRAYSIZE(szNameShort));
 			if(g_Settings.openNew){
 				//load file in new tab
 				LoadDocument(hwnd, szNameFull, szNameShort, NULL, TRUE);
@@ -1375,7 +1377,7 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 						break;
 					case IDNO:
 						//save file under temporary name, send and delete temporary file
-						GetTempSaveName(pE->szLongName, szSaveTemp, TRUE);
+						GetTempSaveName(pE->szLongName, szSaveTemp, ARRAYSIZE(szSaveTemp), TRUE);
 						m_CurrType = pE->type;
 						SaveFile(szSaveTemp, pE);
 						SendAsAttachment(hwnd, szSaveTemp, EMAIL_SUBJECT, szTemp, ARRAYSIZE(szTemp));
@@ -1410,7 +1412,7 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 					}
 					case IDNO:
 						//save file under temporary name, send and delete temporary file
-						GetTempSaveName(pE->szLongName, szSaveTemp, FALSE);
+						GetTempSaveName(pE->szLongName, szSaveTemp, ARRAYSIZE(szSaveTemp), FALSE);
 						m_CurrType = pE->type;
 						SaveFile(szSaveTemp, pE);
 						SendAsAttachment(hwnd, szSaveTemp, EMAIL_SUBJECT, szTemp, ARRAYSIZE(szTemp));
@@ -1729,11 +1731,11 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		else if(id > RECENT_MENU_MIN && id <= RECENT_MENU_MIN + RECENT_FILES_MAX){	
 			//menu item from 'Recent files' has been selected
 			//get file path
-			GetRecentPath(id, szNameFull);
+			GetRecentPath(id, szNameFull, ARRAYSIZE(szNameFull));
 			ZeroMemory(&fd, sizeof(fd));
 			if(GetFileAttributesW(szNameFull) != 0xffffffff){
 				//if file exists
-				GetFileNameFromPath(szNameFull, szNameShort);
+				GetFileNameFromPath(szNameFull, szNameShort, ARRAYSIZE(szNameShort));
 				//load document
 				pE = LoadDocument(hwnd, szNameFull, szNameShort, NULL, TRUE);
 				//load possible bookmarks
@@ -2102,7 +2104,7 @@ static BOOL IsDLLVersionForStyle(void){
 static void GetSubPath(wchar_t * lpResult, const wchar_t * lpFile){
 	GetModuleFileNameW(NULL, lpResult, MAX_PATH);
 	PathRemoveFileSpecW(lpResult);
-	wcscat(lpResult, lpFile);
+	StringCchCatW(lpResult, MAX_PATH, lpFile);
 }
 
 static int ParseTPCommandLine(wchar_t * pINIPath, wchar_t * pDataPath, wchar_t * pProgPath, wchar_t * pLoadPath){
@@ -2122,21 +2124,21 @@ static int ParseTPCommandLine(wchar_t * pINIPath, wchar_t * pDataPath, wchar_t *
 				if((_wcsicmp(szArglist[i], L"-conf") == 0) || (_wcsicmp(szArglist[i], L"-config") == 0)){
 					if(nArgs >= 3){
 						if(wcslen(szArglist[i + 1]) > 0){
-							wcscpy(pINIPath, szArglist[i + 1]);
+							StringCchCopyW(pINIPath, MAX_PATH, szArglist[i + 1]);
 							PathUnquoteSpacesW(pINIPath);
 							result |= ARG_INI_PATH;
 						}
 					}
 					if(nArgs >= 4){
 						if(wcslen(szArglist[i + 2]) > 0){
-							wcscpy(pDataPath, szArglist[i + 2]);
+							StringCchCopyW(pDataPath, MAX_PATH, szArglist[i + 2]);
 							PathUnquoteSpacesW(pDataPath);
 							result |= ARG_DATA_PATH;
 						}
 					}
 					if(nArgs == 5){
 						if(wcslen(szArglist[i + 3]) > 0){
-							wcscpy(pProgPath, szArglist[i + 3]);
+							StringCchCopyW(pProgPath, MAX_PATH, szArglist[i + 3]);
 							PathUnquoteSpacesW(pProgPath);
 							result |= ARG_PROG_PATH;
 						}
@@ -2162,13 +2164,13 @@ static int ParseTPCommandLine(wchar_t * pINIPath, wchar_t * pDataPath, wchar_t *
 				else{
 					result = ARG_LOAD_ON_START;
 					if(nArgs == 1){
-						wcscpy(pLoadPath, szArglist[1]);
+						StringCchCopyW(pLoadPath, MAX_PATH, szArglist[1]);
 					}
 					else{
 						for(int i = 1; i < nArgs; i++){
-							wcscat(pLoadPath, szArglist[i]);
+							StringCchCatW(pLoadPath, MAX_PATH, szArglist[i]);
 							if(i < nArgs - 1){
-								wcscat(pLoadPath, L" ");
+								StringCchCatW(pLoadPath, MAX_PATH, L" ");
 							}
 						}
 					}
@@ -2240,7 +2242,7 @@ static void RemoveFromLastSession(wchar_t * lpPath){
 	GetPrivateProfileStringW(S_LASTSESSION, NULL, NULL, szKeys, 512, g_Paths.sINI);
 	pw = szKeys;
 	if(*pw){
-		ConstructINIKey(szPattern, lpPath);
+		ConstructINIKey(szPattern, ARRAYSIZE(szPattern), lpPath);
 		// wcscpy(szPattern, m_MACAddress);
 		// wcscat(szPattern, DELIMETER);
 		// wcscat(szPattern, lpPath);
@@ -2331,7 +2333,7 @@ static void LoadLastSession(HWND hMain){
 						WritePrivateProfileStringW(S_LASTSESSION, pw, NULL, g_Paths.sINI);
 					}
 					else{
-						GetFileNameFromPath(pName, szNameShort);
+						GetFileNameFromPath(pName, szNameShort, ARRAYSIZE(szNameShort));
 						pE = LoadDocument(hMain, pName, szNameShort, NULL, TRUE);
 						LoadRecentBookmarks(S_LASTS_BOOKMARKS, pE);
 						if(pE->bookmarks){
@@ -2346,7 +2348,7 @@ static void LoadLastSession(HWND hMain){
 					}
 					else{
 						*pName == m_DriveLetter[0];
-						GetFileNameFromPath(pName, szNameShort);
+						GetFileNameFromPath(pName, szNameShort, ARRAYSIZE(szNameShort));
 						pE = LoadDocument(hMain, pName, szNameShort, NULL, TRUE);
 						LoadRecentBookmarks(S_LASTS_BOOKMARKS, pE);
 						if(pE->bookmarks){
@@ -2378,7 +2380,7 @@ static void RecreateLastSession(void){
 			while(InOtherLastIndices(index))
 				index++;
 			_itow(index, szKey, 10);
-			ConstructINIKey(szPattern, pE->szLongName);
+			ConstructINIKey(szPattern, ARRAYSIZE(szPattern), pE->szLongName);
 			// if(!m_RemovableDrive){
 				// wcscpy(szPattern, m_MACAddress);
 				// wcscat(szPattern, DELIMETER);
@@ -2688,7 +2690,7 @@ static void AddToRecentFiles(P_TPEDIT pE, BOOL fAddToMenu){
 				WritePrivateProfileStringW(S_RECENT_BOOKMARKS, szPath, NULL, g_Paths.sINI);
 		}
 		_itow(number, szKey, 10);
-		ConstructINIKey(szPath, pE->szLongName);
+		ConstructINIKey(szPath, ARRAYSIZE(szPath), pE->szLongName);
 		// if(!m_RemovableDrive){
 			// wcscpy(szPath, m_MACAddress);
 			// wcscat(szPath, DELIMETER);
@@ -2728,7 +2730,7 @@ static int ShiftRecentFilesUp(void){
 	return m_RecentIndices[i];
 }
 
-static void GetRecentPath(int id, wchar_t * lpPath){
+static void GetRecentPath(int id, wchar_t * lpPath, size_t cchPath){
 	HMENU			h1, h2;
 	wchar_t			szTemp[MAX_PATH], *pw;
 
@@ -2740,7 +2742,7 @@ static void GetRecentPath(int id, wchar_t * lpPath){
 		;
 	while(*pw == ' ')
 		pw++;
-	wcscpy(lpPath, pw);
+	StringCchCopyW(lpPath, cchPath, pw);
 }
 
 static BOOL IsRecentInList(wchar_t * lpPath){
@@ -2843,9 +2845,9 @@ static void PrepareMenuRecursive(HMENU hMenu, wchar_t * lpLangFile){
 				PrepareMenuRecursive(mi.hSubMenu, lpLangFile);
 			}
 			
-			GetMIText(m_pMenus, NELEMS(m_MainMenus), mi.wID, szDefault);
+			GetMIText(m_pMenus, NELEMS(m_MainMenus), mi.wID, szDefault, ARRAYSIZE(szDefault));
 			SetMenuText(mi.wID, S_MENU, lpLangFile, szDefault, szText);
-			if(GetAccString(m_pAcc, m_AccCount, mi.wID, szAcc) != NULL){
+			if(GetAccString(m_pAcc, m_AccCount, mi.wID, szAcc, ARRAYSIZE(szAcc)) != NULL){
 				wcscat(szText, szAcc);
 			}
 			SetMIText(m_MainMenus, NELEMS(m_MainMenus), mi.wID, szText);
@@ -3138,6 +3140,7 @@ static void GetStrings(wchar_t * lpLangFile){
 
 static void LoadDateTimeMasks(wchar_t * lpLangFile){
 	wchar_t			szBuffer[1024 * 10], *pw;
+	const size_t	formatsCch = 1024 * 10;
 
 	if(g_pDFormats)
 		free(g_pDFormats);
@@ -3151,15 +3154,15 @@ static void LoadDateTimeMasks(wchar_t * lpLangFile){
 	if(*pw){
 		while(*pw || *(pw - 1)){
 			if(*pw && *pw != 31888){
-				wcscat(g_pDFormats, pw);
-				wcscat(g_pDFormats, L"\n");
+				StringCchCatW(g_pDFormats, formatsCch, pw);
+				StringCchCatW(g_pDFormats, formatsCch, L"\n");
 			}
 			while(*pw++)
 				;
 		}
 	}
 	else{
-		wcscpy(g_pDFormats, DATE_FORMAT_MASKS);
+		StringCchCopyW(g_pDFormats, formatsCch, DATE_FORMAT_MASKS);
 	}
 	*szBuffer = '\0';
 	GetPrivateProfileSectionW(S_TF_CHARS_H12, szBuffer, 1024 * 10, lpLangFile);
@@ -3167,15 +3170,15 @@ static void LoadDateTimeMasks(wchar_t * lpLangFile){
 	if(*pw){
 		while(*pw || *(pw - 1)){
 			if(*pw && *pw != 31888){
-				wcscat(g_pTFormats, pw);
-				wcscat(g_pTFormats, L"\n");
+				StringCchCatW(g_pTFormats, formatsCch, pw);
+				StringCchCatW(g_pTFormats, formatsCch, L"\n");
 			}
 			while(*pw++)
 				;
 		}
 	}
 	else{
-		wcscpy(g_pTFormats, TIME_FMT_MASKS_H12);
+		StringCchCopyW(g_pTFormats, formatsCch, TIME_FMT_MASKS_H12);
 	}
 	*szBuffer = '\0';
 	GetPrivateProfileSectionW(S_TF_CHARS_H24, szBuffer, 1024 * 10, lpLangFile);
@@ -3183,15 +3186,15 @@ static void LoadDateTimeMasks(wchar_t * lpLangFile){
 	if(*pw){
 		while(*pw || *(pw - 1)){
 			if(*pw && *pw != 31888){
-				wcscat(g_pTFormats, pw);
-				wcscat(g_pTFormats, L"\n");
+				StringCchCatW(g_pTFormats, formatsCch, pw);
+				StringCchCatW(g_pTFormats, formatsCch, L"\n");
 			}
 			while(*pw++)
 				;
 		}
 	}
 	else{
-		wcscpy(g_pTFormats, TIME_FMT_MASKS_H24);
+		StringCchCopyW(g_pTFormats, formatsCch, TIME_FMT_MASKS_H24);
 	}
 	*szBuffer = '\0';
 	GetPrivateProfileSectionW(S_TF_CHARS, szBuffer, 1024 * 10, lpLangFile);
@@ -3199,15 +3202,15 @@ static void LoadDateTimeMasks(wchar_t * lpLangFile){
 	if(*pw){
 		while(*pw || *(pw - 1)){
 			if(*pw && *pw != 31888){
-				wcscat(g_pTFormats, pw);
-				wcscat(g_pTFormats, L"\n");
+				StringCchCatW(g_pTFormats, formatsCch, pw);
+				StringCchCatW(g_pTFormats, formatsCch, L"\n");
 			}
 			while(*pw++)
 				;
 		}
 	}
 	else{
-		wcscpy(g_pTFormats, TIME_FMT_MASKS);
+		StringCchCopyW(g_pTFormats, formatsCch, TIME_FMT_MASKS);
 	}
 	pw = g_pDFormats;
 	while(*pw++){
@@ -4444,7 +4447,7 @@ static void DrawTabItem(const DRAWITEMSTRUCT * lpDrawItem){
 	DrawIconEx(lpDrawItem->hDC, rc.left + 4, rc.top + 4, GetSmallIcon(lpDrawItem->itemID), 16, 16, 0, 0, DI_NORMAL);
 
 	SetRect(&rc, rc.left + 24, rc.top, rc.right - 24, rc.bottom);
-	GetShortName(lpDrawItem->itemID, szBuffer, TRUE);
+	GetShortName(lpDrawItem->itemID, szBuffer, ARRAYSIZE(szBuffer), TRUE);
 	DrawTextW(lpDrawItem->hDC, szBuffer, -1, &rc, DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS);
 
 	if(clrTextOld)
@@ -4465,7 +4468,7 @@ static HICON GetSmallIcon(int index){
 	return NULL;
 }
 
-static void GetShortName(int index, wchar_t * lpName, BOOL fWithStar){
+static void GetShortName(int index, wchar_t * lpName, size_t cchName, BOOL fWithStar){
 	TCITEMW		ti;
 	P_TPEDIT	pE;
 
@@ -4477,14 +4480,14 @@ static void GetShortName(int index, wchar_t * lpName, BOOL fWithStar){
 		pE = (P_TPEDIT)ti.lParam;
 		if(fWithStar){
 			if(pE->changed){
-				wcscat(lpName, L"*");
+				StringCchCatW(lpName, cchName, L"*");
 			}
 		}
-		wcscat(lpName, pE->szShortName);
+		StringCchCatW(lpName, cchName, pE->szShortName);
 	}
 }
 
-static void GetLongName(int index, wchar_t * lpName){
+static void GetLongName(int index, wchar_t * lpName, size_t cchName){
 	TCITEMW		ti;
 	P_TPEDIT	pE;
 
@@ -4493,7 +4496,7 @@ static void GetLongName(int index, wchar_t * lpName){
 	SendMessageW(m_hTabMain, TCM_GETITEMW, index, (LPARAM)&ti);
 	if(ti.lParam){
 		pE = (P_TPEDIT)ti.lParam;
-		wcscpy(lpName, pE->szLongName);
+		StringCchCopyW(lpName, cchName, pE->szLongName);
 	}
 }
 
@@ -4668,7 +4671,7 @@ static void RecreateWindowMenu(void){
 	ClearWindowMenu();
 
 	for(int i = 0; i < count; i++){
-		GetLongName(i, szBuffer);
+		GetLongName(i, szBuffer, ARRAYSIZE(szBuffer));
 		AddWindowMenu(hMenu, i, szBuffer, FALSE);
 	}
 	CheckWindowMenu(hMenu, WIN_MENU_MIN + TabCtrl_GetCurSel(m_hTabMain));
@@ -4702,7 +4705,7 @@ static BOOL OSFileDialog(wchar_t * lpCaption, wchar_t * lpNameFull, wchar_t * lp
 		if(!fUntitled){
 			wchar_t		szTemp[MAX_PATH];
 			wcscpy(szTemp, lpNameFull);
-			GetFileNameFromPath(szTemp, lpNameFull);
+			GetFileNameFromPath(szTemp, lpNameFull, MAX_PATH);
 		}
 	}
 	ofn.lpstrFile = lpNameFull;
@@ -4887,8 +4890,8 @@ static UINT_PTR CALLBACK OFNHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARA
 	return FALSE;
 }
 
-static void GetFileNameFromPath(wchar_t * lpPath, wchar_t * lpName){
-	wcscpy(lpName, lpPath);
+static void GetFileNameFromPath(wchar_t * lpPath, wchar_t * lpName, size_t cchName){
+	StringCchCopyW(lpName, cchName, lpPath);
 	PathStripPathW(lpName);
 	// while(*lpPath++)
 		// ;
@@ -5107,7 +5110,7 @@ static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam){
 	return TRUE;
 }
 
-static void GetTempSaveName(wchar_t * lpLongName, wchar_t * lpTempSave, BOOL fGetExtension){
+static void GetTempSaveName(wchar_t * lpLongName, wchar_t * lpTempSave, size_t cchTempSave, BOOL fGetExtension){
 	//prepare temporary file name
 	wchar_t			szTempName[128], * pName;
 
@@ -5120,7 +5123,7 @@ static void GetTempSaveName(wchar_t * lpLongName, wchar_t * lpTempSave, BOOL fGe
 	else{
 		wcscat(szTempName, L".txt");
 	}
-	wcscat(lpTempSave, szTempName);
+	StringCchCatW(lpTempSave, cchTempSave, szTempName);
 }
 
 static void DrawToolbarButton(HDC hdc, LPRECT lprc, int state, int id){
@@ -5785,7 +5788,7 @@ static void LoadRecentBookmarks(wchar_t * lpSection, P_TPEDIT pE){
 	long			line;
 	wchar_t			szPath[MAX_PATH * 2], szBookmarks[BOOKMARKS_MAX * 32], *p1, *p2;
 
-	ConstructINIKey(szPath, pE->szLongName);
+	ConstructINIKey(szPath, ARRAYSIZE(szPath), pE->szLongName);
 	//get bbokmarks string delimited by '^' character
 	GetPrivateProfileStringW(lpSection, szPath, NULL, szBookmarks, BOOKMARKS_MAX * 32, g_Paths.sINI);
 	if(wcslen(szBookmarks) > 0){
@@ -5808,27 +5811,27 @@ static void LoadRecentBookmarks(wchar_t * lpSection, P_TPEDIT pE){
 	}
 }
 
-static void ConstructINIKey(wchar_t * lpPath, wchar_t * lpLongName){
+static void ConstructINIKey(wchar_t * lpPath, size_t cchPath, wchar_t * lpLongName){
 	//construct key for INI file depending on program location
 	if(!m_RemovableDrive){
 		//program is running from fixed drive - build key with real MAC address
-		wcscpy(lpPath, m_MACAddress);
-		wcscat(lpPath, DELIMETER);
-		wcscat(lpPath, lpLongName);
+		StringCchCopyW(lpPath, cchPath, m_MACAddress);
+		StringCchCatW(lpPath, cchPath, DELIMETER);
+		StringCchCatW(lpPath, cchPath, lpLongName);
 	}
 	else{
 		//program is running from removable drive
 		if(m_DriveLetter[0] == lpLongName[0]){
 			//the path is from removable drive as well - construct key with "dummy" MAC address
-			wcscpy(lpPath, REMOVABLE_MAC);
-			wcscat(lpPath, DELIMETER);
-			wcscat(lpPath, lpLongName);
+			StringCchCopyW(lpPath, cchPath, REMOVABLE_MAC);
+			StringCchCatW(lpPath, cchPath, DELIMETER);
+			StringCchCatW(lpPath, cchPath, lpLongName);
 		}
 		else{
 			//the path is from fixed drive - construct key with real MAC address
-			wcscpy(lpPath, m_MACAddress);
-			wcscat(lpPath, DELIMETER);
-			wcscat(lpPath, lpLongName);
+			StringCchCopyW(lpPath, cchPath, m_MACAddress);
+			StringCchCatW(lpPath, cchPath, DELIMETER);
+			StringCchCatW(lpPath, cchPath, lpLongName);
 		}
 	}
 }

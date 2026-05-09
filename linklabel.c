@@ -137,7 +137,7 @@ static void SetLLTextW(HWND hwnd, wchar_t * lpText){
 	if(pText)
 		free(pText);
 	pText = (wchar_t *)calloc(wcslen(lpText) + 1, sizeof(wchar_t));
-	wcscpy(pText, lpText);
+	StringCchCopyW(pText, wcslen(lpText) + 1, lpText);
 	SetWindowLongPtrW(hwnd, 0, (LONG_PTR)pText);
 	hdc = GetDC(hwnd);
 	state = SaveDC(hdc);
@@ -184,7 +184,7 @@ static BOOL LLabel_OnCreate(HWND hwnd, LPCREATESTRUCT lpCreateStruct)
 		plfW->lfCharSet = 1;
 		plfW->lfUnderline = TRUE;
 		plfW->lfHeight = -MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
-		wcscpy(plfW->lfFaceName, L"MS Sans Serif");
+		StringCchCopyW(plfW->lfFaceName, ARRAYSIZE(plfW->lfFaceName), L"MS Sans Serif");
 		SetWindowLongPtrW(hwnd, 4, (LONG_PTR)plfW);
 	}
 	else{

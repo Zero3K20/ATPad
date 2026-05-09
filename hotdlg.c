@@ -25,6 +25,7 @@
 #include <commctrl.h>
 #include <richedit.h>
 #include <stdlib.h>
+#include <strsafe.h>
 
 #include "globalvars.h"
 #include "shared.h"
@@ -170,8 +171,8 @@ static BOOL Hotdlg_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 		free(g_TempAcc);
 	g_TempAcc = 0;
 
-	wcscpy(szLang, g_Paths.sLangDir);
-	wcscat(szLang, g_Paths.sLangFile);
+	StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+	StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 	GetPrivateProfileStringW(S_CONTROLS, L"1007", L"Hot keys", szCaption, 128, szLang);
 	SetWindowTextW(hwnd, szCaption);
 	SetControlText(hwnd, IDC_ST_HK_COMMAND, L"Menu commands:", szLang);
@@ -240,7 +241,7 @@ static void InsertCommands(HMENU hMenu, HTREEITEM htiParent){
 					tvs.itemex.iImage = 1;
 					tvs.itemex.iSelectedImage = 1;
 				}
-				wcscpy(acc.text, ptr);
+				StringCchCopyW(acc.text, ARRAYSIZE(acc.text), ptr);
 				tvs.itemex.pszText = szBuffer;
 				pAcc = malloc(sizeof(TP_TEMPACCEL));
 				memcpy(pAcc, &acc, sizeof(TP_TEMPACCEL));
@@ -357,8 +358,8 @@ static BOOL AccSet_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 	wchar_t		szLang[MAX_PATH];
 	HWND		hEdit;
 
-	wcscpy(szLang, g_Paths.sLangDir);
-	wcscat(szLang, g_Paths.sLangFile);
+	StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+	StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 	// GetPrivateProfileStringW(S_CONTROLS, L"1007", L"Hot keys", szCaption, 128, szLang);
 	// SetWindowTextW(hwnd, szCaption);
 	SetControlText(hwnd, IDC_ST_ACC_SET, L"Type the keys to be used as hot key for selected command", szLang);
@@ -378,9 +379,9 @@ static LRESULT CALLBACK EditProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 		case WM_KEYDOWN:
 		case WM_SYSKEYDOWN:
 			//get modifiers
-			idMod = GetModifiers(szModifiers);
+			idMod = GetModifiers(szModifiers, ARRAYSIZE(szModifiers));
 			//get the very first other key pressed
-			key = GetOtherKey(szKey);
+			key = GetOtherKey(szKey, ARRAYSIZE(szKey));
 			if(idMod == 0 && (key >= VK_F1 && key <= VK_F24)){
 				proceed = TRUE;
 			}
@@ -388,11 +389,11 @@ static LRESULT CALLBACK EditProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 				proceed = TRUE;
 			}
 			if(proceed){
-				wcscpy(szBuffer, szModifiers);
-				wcscat(szBuffer, szKey);
+				StringCchCopyW(szBuffer, ARRAYSIZE(szBuffer), szModifiers);
+				StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), szKey);
 				m_Acc.acc.fVirt = FVIRTKEY | idMod;
 				m_Acc.acc.key = key;
-				wcscpy(m_Acc.text, szBuffer);
+				StringCchCopyW(m_Acc.text, ARRAYSIZE(m_Acc.text), szBuffer);
 				EnableWindow(GetDlgItem(GetParent(hwnd), IDOK), TRUE);
 				SetWindowTextW(hwnd, szBuffer);
 			}

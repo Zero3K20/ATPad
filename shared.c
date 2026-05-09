@@ -22,6 +22,7 @@
 #include <windows.h>
 #include <commctrl.h>
 #include <richedit.h>
+#include <strsafe.h>
 
 #include "stringconstants.h"
 #include "globalvars.h"
@@ -78,11 +79,11 @@ PMItem GetMItem(PMItem	lpMI, const int size, int id){
 	return NULL;
 }
 
-void GetMIText(MItem * lpMI, const int size, int id, wchar_t * lpText){
+void GetMIText(MItem * lpMI, const int size, int id, wchar_t * lpText, size_t cchText){
 
 	for(int i = 0; i < size; i++){
 		if(lpMI->id == id){
-			wcscpy(lpText, lpMI->szText);
+			StringCchCopyW(lpText, cchText, lpMI->szText);
 			break;
 		}
 		lpMI++;
@@ -93,19 +94,19 @@ void SetMIText(MItem * lpMI, const int size, int id, const wchar_t * lpText){
 
 	for(int i = 0; i < size; i++){
 		if(lpMI->id == id){
-			wcscpy(lpMI->szText, lpText);
+			StringCchCopyW(lpMI->szText, ARRAYSIZE(lpMI->szText), lpText);
 			break;
 		}
 		lpMI++;
 	}
 }
 
-void GetTooltip(wchar_t * lpTip, PMItem pItems, int size, UINT id){
+void GetTooltip(wchar_t * lpTip, size_t cchTip, PMItem pItems, int size, UINT id){
 	//erase string
-	*lpTip = '\0';
+	StringCchCopyW(lpTip, cchTip, L"");
 	for(int i = 0; i < size; i++, pItems++){
 		if(pItems->id == id){
-			wcscpy(lpTip, pItems->szText);
+			StringCchCopyW(lpTip, cchTip, pItems->szText);
 			break;
 		}
 	}
