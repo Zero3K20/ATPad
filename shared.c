@@ -243,7 +243,7 @@ void DrawLineNumbersRegular(HWND hwnd, HDC hdc, TPSETTINGS settings, GCOLORTYPE 
 	COLORREF	cOldC;
 	wchar_t		szNumber[32];
 	POINT		pt;
-	HBRUSH		hBrush = NULL, hBrBm;
+	HBRUSH		hBrush = NULL, hBrBm = NULL;
 	long		first, last, temp, pos, charIndex, line, count;
 	HICON		hBmIcon;
 
@@ -398,7 +398,7 @@ void DrawLineNumbersWrap(HWND hwnd, HDC hdc, TPSETTINGS settings, GCOLORTYPE ctB
 	COLORREF	cOldC;
 	wchar_t		szNumber[32];
 	POINT		pt;
-	HBRUSH		hBrush = NULL, hBrBm;
+	HBRUSH		hBrush = NULL, hBrBm = NULL;
 	long		first, last, temp, pos, charIndex, line, count;
 	TEXTRANGEW	trg;
 	wchar_t		szChar[2];
