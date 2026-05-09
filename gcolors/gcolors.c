@@ -18,6 +18,7 @@
 #include <windowsx.h>
 #include <tchar.h>
 #include <commctrl.h>
+#include <strsafe.h>
 #include <glistbox.h>
 #include "gcolors.h"
 
@@ -508,11 +509,11 @@ static BOOL Colors_OnCreate(HWND hwnd, LPCREATESTRUCT lpCreateStruct)
 		ZeroMemory(&tci, sizeof(tci));
 		tci.mask = TCIF_TEXT;
 		tci.pszText = szBuffer;
-		strcpy(szBuffer, T_CAPTION_1);
+		StringCchCopyA(szBuffer, ARRAYSIZE(szBuffer), T_CAPTION_1);
 		SendMessage(hTab, TCM_INSERTITEM, 0, (LPARAM)&tci);
-		strcpy(szBuffer, T_CAPTION_2);
+		StringCchCopyA(szBuffer, ARRAYSIZE(szBuffer), T_CAPTION_2);
 		SendMessage(hTab, TCM_INSERTITEM, 1, (LPARAM)&tci);
-		strcpy(szBuffer, T_CAPTION_3);
+		StringCchCopyA(szBuffer, ARRAYSIZE(szBuffer), T_CAPTION_3);
 		SendMessage(hTab, TCM_INSERTITEM, 2, (LPARAM)&tci);
 		SendMessage(hTab, TCM_ADJUSTRECT, FALSE, (LPARAM)&rc);
 	}
@@ -880,5 +881,4 @@ static void DrawBasicFocus(int x, int y){
 	RedrawWindow(hBasics, NULL, NULL, RDW_INVALIDATE);
 	bDrawBasic = TRUE;
 }
-
 

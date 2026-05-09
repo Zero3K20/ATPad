@@ -18,6 +18,7 @@
 #include <windowsx.h>
 #include <tchar.h>
 #include <commctrl.h>
+#include <strsafe.h>
 
 #include "linklabel.h"
 #include "about.h"
@@ -64,7 +65,7 @@ static void CreateAboutString(HINSTANCE hInstance){
 	UINT cbBuffSize;
 	WORD * langInfo;
 
-	strcpy(m_sName, _T("About - "));
+	StringCchCopyA(m_sName, ARRAYSIZE(m_sName), _T("About - "));
 	GetModuleFileName(hInstance, szPath, MAX_PATH);
 	dwBytes = GetFileVersionInfoSize(szPath, &dwSize);
 	if(dwBytes){
@@ -72,29 +73,29 @@ static void CreateAboutString(HINSTANCE hInstance){
 		if(GetFileVersionInfo(szPath, 0, dwBytes, hMem)){
 			if(VerQueryValue(hMem, _T("\\VarFileInfo\\Translation"), (LPVOID*)&langInfo, &cbLang)){
 				//InternalName
-				wsprintf(szBuffer, FORMAT_STRING, langInfo[0], langInfo[1], _T("InternalName"));
+				StringCchPrintfA(szBuffer, ARRAYSIZE(szBuffer), FORMAT_STRING, langInfo[0], langInfo[1], _T("InternalName"));
 				if(VerQueryValue(hMem, szBuffer, &lpt, &cbBuffSize)){
-					strcpy(m_sAbout, (LPTSTR)lpt);
-					strcat(m_sAbout, _T(" - "));
-					strcat(m_sName, (LPTSTR)lpt);
+					StringCchCopyA(m_sAbout, ARRAYSIZE(m_sAbout), (LPTSTR)lpt);
+					StringCchCatA(m_sAbout, ARRAYSIZE(m_sAbout), _T(" - "));
+					StringCchCatA(m_sName, ARRAYSIZE(m_sName), (LPTSTR)lpt);
 				}
 				//FileVersion
-				wsprintf(szBuffer, FORMAT_STRING, langInfo[0], langInfo[1], _T("FileVersion"));
+				StringCchPrintfA(szBuffer, ARRAYSIZE(szBuffer), FORMAT_STRING, langInfo[0], langInfo[1], _T("FileVersion"));
 				if(VerQueryValue(hMem, szBuffer, &lpt, &cbBuffSize)){
-					strcat(m_sAbout, (LPTSTR)lpt);
-					strcat(m_sAbout, _T("\n\n"));
+					StringCchCatA(m_sAbout, ARRAYSIZE(m_sAbout), (LPTSTR)lpt);
+					StringCchCatA(m_sAbout, ARRAYSIZE(m_sAbout), _T("\n\n"));
 				}
 				//FileDescription
-				wsprintf(szBuffer, FORMAT_STRING, langInfo[0], langInfo[1], _T("FileDescription"));
+				StringCchPrintfA(szBuffer, ARRAYSIZE(szBuffer), FORMAT_STRING, langInfo[0], langInfo[1], _T("FileDescription"));
 				if(VerQueryValue(hMem, szBuffer, &lpt, &cbBuffSize)){
-					strcat(m_sAbout, (LPTSTR)lpt);
-					strcat(m_sAbout, _T("\n\n"));
+					StringCchCatA(m_sAbout, ARRAYSIZE(m_sAbout), (LPTSTR)lpt);
+					StringCchCatA(m_sAbout, ARRAYSIZE(m_sAbout), _T("\n\n"));
 				}
 				//LegalCopyright
-				wsprintf(szBuffer, FORMAT_STRING, langInfo[0], langInfo[1], _T("LegalCopyright"));
+				StringCchPrintfA(szBuffer, ARRAYSIZE(szBuffer), FORMAT_STRING, langInfo[0], langInfo[1], _T("LegalCopyright"));
 				if(VerQueryValue(hMem, szBuffer, &lpt, &cbBuffSize)){
-					strcat(m_sAbout, (LPTSTR)lpt);
-					strcat(m_sAbout, _T("\n\n"));
+					StringCchCatA(m_sAbout, ARRAYSIZE(m_sAbout), (LPTSTR)lpt);
+					StringCchCatA(m_sAbout, ARRAYSIZE(m_sAbout), _T("\n\n"));
 				}
 				// //Comments
 				// wsprintf(szBuffer, FORMAT_STRING, langInfo[0], langInfo[1], _T("Comments"));
@@ -104,7 +105,7 @@ static void CreateAboutString(HINSTANCE hInstance){
 				// }
 				//License
 				LoadString(hInstance, IDS_LICENSE, szLicense, 512);
-				strcat(m_sAbout, szLicense);
+				StringCchCatA(m_sAbout, ARRAYSIZE(m_sAbout), szLicense);
 			}
 		}
 		GlobalFree(hMem);
@@ -140,8 +141,8 @@ static LRESULT CALLBACK About_DlgProc (HWND hwnd, UINT msg, WPARAM wParam, LPARA
 		LPNMHDR lpnmh = (LPNMHDR)lParam;
 		char	szAddress[128];
 		if(lpnmh->idFrom == IDC_EMAIL && lpnmh->code == NM_CLICK){
-			strcpy(szAddress, "mailto:");
-			strcat(szAddress, LLGetText(GetDlgItem(hwnd, IDC_EMAIL)));
+			StringCchCopyA(szAddress, ARRAYSIZE(szAddress), "mailto:");
+			StringCchCatA(szAddress, ARRAYSIZE(szAddress), LLGetText(GetDlgItem(hwnd, IDC_EMAIL)));
 			ShellExecute(hwnd, _T("open"), szAddress, NULL, NULL, SW_SHOWDEFAULT);
 		}
 		return TRUE;
@@ -225,4 +226,3 @@ static void CenterWindow(HWND hwnd){
 		((rcD.bottom - rcD.top) - (rcW.bottom - rcW.top)) / 2, \
 		rcW.right - rcW.left, rcW.bottom - rcW.top, TRUE);
 }
-

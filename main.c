@@ -38,6 +38,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <wctype.h>
+#include <strsafe.h>
 
 #include "main.h"
 #include "toolbar.h"
@@ -647,11 +648,11 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 			MessageBoxW(hwnd, g_Strings.sSameVersion, g_Strings.sCheckUpdate, MB_OK | MB_ICONINFORMATION);
 		return TRUE;
 	case UPDM_GETVERSION:
-		strcpy((char *)wParam, m_Version);
+		StringCchCopyA((char *)wParam, ARRAYSIZE(m_Version), m_Version);
 		return TRUE;
 	case UPDM_GETSTRINGS:
-		strcpy((char *)wParam, UPDATE_CHECK_URL);
-		strcpy((char *)lParam, "/version.txt");
+		StringCchCopyA((char *)wParam, sizeof(UPDATE_CHECK_URL), UPDATE_CHECK_URL);
+		StringCchCopyA((char *)lParam, sizeof("/version.txt"), "/version.txt");
 		return TRUE;
 	case TBNPM_GET_MENU_TXT:
 		GetMIText(m_MainMenus, NELEMS(m_MainMenus), wParam, (wchar_t *)lParam);
@@ -5737,9 +5738,9 @@ static void GetVersionNumber(void){
 		hMem = GlobalAlloc(GMEM_ZEROINIT | GMEM_FIXED, dwBytes);
 		if(GetFileVersionInfo(szPath, 0, dwBytes, hMem)){
 			if(VerQueryValue(hMem, "\\VarFileInfo\\Translation", (LPVOID*)&langInfo, &cbLang)){
-				wsprintf(szBuffer, FORMAT_STRING, langInfo[0], langInfo[1], "FileVersion");
+				StringCchPrintfA(szBuffer, ARRAYSIZE(szBuffer), FORMAT_STRING, langInfo[0], langInfo[1], "FileVersion");
 				if(VerQueryValue(hMem, szBuffer, &lpt, &cbBuffSize)){
-					strcpy(m_Version, lpt);
+					StringCchCopyA(m_Version, ARRAYSIZE(m_Version), lpt);
 				}
 			}
 		}
@@ -5876,7 +5877,7 @@ static void GetMACAddress(void){
 	if(GetAdaptersInfo(pAdapterInfo, &ulBuffLen) == NO_ERROR){
 		if(pAdapterInfo){
 			//get address of first adapter
-			sprintf(szMAC, "%02X-%02X-%02X-%02X-%02X-%02X", pAdapterInfo->Address[0], pAdapterInfo->Address[1], pAdapterInfo->Address[2], pAdapterInfo->Address[3], pAdapterInfo->Address[4], pAdapterInfo->Address[5]);
+			StringCchPrintfA(szMAC, ARRAYSIZE(szMAC), "%02X-%02X-%02X-%02X-%02X-%02X", pAdapterInfo->Address[0], pAdapterInfo->Address[1], pAdapterInfo->Address[2], pAdapterInfo->Address[3], pAdapterInfo->Address[4], pAdapterInfo->Address[5]);
 			//conver string to unicode
 			MultiByteToWideChar(CP_ACP, 0, szMAC, -1, m_MACAddress, 32);
 		}
