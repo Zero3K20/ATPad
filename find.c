@@ -25,6 +25,7 @@
 #include <richedit.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <strsafe.h>
 
 #include "find.h"
 #include "stringconstants.h"
@@ -185,9 +186,9 @@ static void Find_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 				SendDlgItemMessageW(hwnd, IDC_CBO_REPLACE_WITH, CB_INSERTSTRING, 0, (LPARAM)g_ReplaceString);
 				AddToHistory(hwnd, IDC_CBO_REPLACE_WITH);
 			}
-			wcscpy(szMessage, g_Strings.sNoOccurrences);
-			wcscat(szMessage, L"\n");
-			wcscat(szMessage, g_SearchString);
+			StringCchCopyW(szMessage, ARRAYSIZE(szMessage), g_Strings.sNoOccurrences);
+			StringCchCatW(szMessage, ARRAYSIZE(szMessage), L"\n");
+			StringCchCatW(szMessage, ARRAYSIZE(szMessage), g_SearchString);
 			while(bRepeat){
 				bRepeat = FALSE;
 				hEdit = (HWND)SendMessageW(g_hMain, TBNPM_GETACTIVEEDIT, 0, 0);
@@ -281,8 +282,8 @@ static BOOL Find_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 	g_hFind = hwnd;
 	g_FindIndex = g_RepIndex = 0;
 
-	wcscpy(szLang, g_Paths.sLangDir);
-	wcscat(szLang, g_Paths.sLangFile);
+	StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+	StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 
 	if(lParam == 0){
 		PrepareFindControls(hwnd);
@@ -470,10 +471,10 @@ void AddToHistory(HWND hwnd, int id){
 
 	count = SendDlgItemMessageW(hwnd, id, CB_GETCOUNT, 0, 0);
 	if(id == IDC_CBO_FIND_WHAT){
-		wcscpy(szSection, S_FIND);
+		StringCchCopyW(szSection, ARRAYSIZE(szSection), S_FIND);
 	}
 	else{
-		wcscpy(szSection, S_REPLACE);
+		StringCchCopyW(szSection, ARRAYSIZE(szSection), S_REPLACE);
 	}
 	WritePrivateProfileSectionW(szSection, NULL, g_Paths.sINI);
 	for(int i = 0; i < count; i++){
@@ -487,10 +488,10 @@ void LoadFromHistory(HWND hwnd, int id){
 	wchar_t		szKeys[512], *pw, szBuffer[512], szSection[32];
 
 	if(id == IDC_CBO_FIND_WHAT){
-		wcscpy(szSection, S_FIND);
+		StringCchCopyW(szSection, ARRAYSIZE(szSection), S_FIND);
 	}
 	else{
-		wcscpy(szSection, S_REPLACE);
+		StringCchCopyW(szSection, ARRAYSIZE(szSection), S_REPLACE);
 	}
 	GetPrivateProfileStringW(szSection, NULL, NULL, szKeys, 512, g_Paths.sINI);
 	pw = szKeys;
@@ -696,12 +697,12 @@ static P_FRC_ITEM SearchInFile(HWND hEdit, FINDTEXTEXW * pftx, int params){
 static void ShowReplaceResults(wchar_t * lpText, int number){
 	wchar_t			szBuffer[1024], szNumber[12];
 
-	wcscpy(szBuffer, g_Strings.sTotalFound);
-	wcscat(szBuffer, L" \"");
-	wcscat(szBuffer, lpText);
-	wcscat(szBuffer, L"\": ");
+	StringCchCopyW(szBuffer, ARRAYSIZE(szBuffer), g_Strings.sTotalFound);
+	StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L" \"");
+	StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), lpText);
+	StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L"\": ");
 	_ltow(number, szNumber, 10);
-	wcscat(szBuffer, szNumber);
+	StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), szNumber);
 	MessageBoxW(g_hMain, szBuffer, PROGRAM_NAME, MB_OK);
 }
 
@@ -715,9 +716,9 @@ void FindOnClick(void){
 
 	if(wcslen(g_SearchString) == 0)
 		return;
-	wcscpy(szMessage, g_Strings.sNoOccurrences);
-	wcscat(szMessage, L"\n");
-	wcscat(szMessage, g_SearchString);
+	StringCchCopyW(szMessage, ARRAYSIZE(szMessage), g_Strings.sNoOccurrences);
+	StringCchCatW(szMessage, ARRAYSIZE(szMessage), L"\n");
+	StringCchCatW(szMessage, ARRAYSIZE(szMessage), g_SearchString);
 	while(bRepeat){
 		bRepeat = FALSE;
 		hEdit = (HWND)SendMessageW(g_hMain, TBNPM_GETACTIVEEDIT, 0, 0);

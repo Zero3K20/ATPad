@@ -497,11 +497,11 @@ static BOOL Colors_OnCreate(HWND hwnd, LPCREATESTRUCT lpCreateStruct)
 		ZeroMemory(&tciw, sizeof(tciw));
 		tciw.mask = TCIF_TEXT;
 		tciw.pszText = szBufferU;
-		wcscpy(szBufferU, T_CAPTION_1_W);
+		StringCchCopyW(szBufferU, ARRAYSIZE(szBufferU), T_CAPTION_1_W);
 		SendMessageW(hTab, TCM_INSERTITEMW, 0, (LPARAM)&tciw);
-		wcscpy(szBufferU, T_CAPTION_2_W);
+		StringCchCopyW(szBufferU, ARRAYSIZE(szBufferU), T_CAPTION_2_W);
 		SendMessageW(hTab, TCM_INSERTITEMW, 1, (LPARAM)&tciw);
-		wcscpy(szBufferU, T_CAPTION_3_W);
+		StringCchCopyW(szBufferU, ARRAYSIZE(szBufferU), T_CAPTION_3_W);
 		SendMessageW(hTab, TCM_INSERTITEMW, 2, (LPARAM)&tciw);
 		SendMessageW(hTab, TCM_ADJUSTRECT, FALSE, (LPARAM)&rc);
 	}
@@ -881,4 +881,3 @@ static void DrawBasicFocus(int x, int y){
 	RedrawWindow(hBasics, NULL, NULL, RDW_INVALIDATE);
 	bDrawBasic = TRUE;
 }
-
