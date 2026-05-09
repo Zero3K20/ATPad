@@ -395,15 +395,15 @@ void CheckForSelection(HWND hwnd, int type){
 	hEdit = (HWND)SendMessageW(g_hMain, TBNPM_GETACTIVEEDIT, 0, 0);
 	SendMessageW(hEdit, EM_EXGETSEL, 0, (LPARAM)&chrg);
 	if(chrg.cpMax > chrg.cpMin){
-		int			selectionLen;
+		long long	selectionLen;
 		int			textLen;
 		wchar_t		*szBuffer, *pw;
 
-		selectionLen = chrg.cpMax - chrg.cpMin;
+		selectionLen = (long long)chrg.cpMax - (long long)chrg.cpMin;
 		if(selectionLen > INT_MAX - 1){
 			return;
 		}
-		textLen = selectionLen + 1;
+		textLen = (int)selectionLen + 1;
 		szBuffer = malloc(sizeof(wchar_t) * textLen);
 		if(!szBuffer){
 			return;
@@ -630,6 +630,7 @@ static void ReplaceAll(HWND hwnd){
 
 static int ReplaceEditText(HWND hEdit, int params){
 	FINDTEXTEXW		ftx;
+	long long		selectionLen;
 	int				result;
 	int				textLen;
 	wchar_t			*szBuffer;
@@ -643,10 +644,11 @@ static int ReplaceEditText(HWND hEdit, int params){
 	if(ftx.chrg.cpMax < ftx.chrg.cpMin){
 		return -1;
 	}
-	if(ftx.chrg.cpMax - ftx.chrg.cpMin > INT_MAX - 1){
+	selectionLen = (long long)ftx.chrg.cpMax - (long long)ftx.chrg.cpMin;
+	if(selectionLen > INT_MAX - 1){
 		return -1;
 	}
-	textLen = ftx.chrg.cpMax - ftx.chrg.cpMin + 1;
+	textLen = (int)selectionLen + 1;
 	szBuffer = malloc(sizeof(wchar_t) * textLen);
 	if(!szBuffer){
 		return -1;
