@@ -757,6 +757,7 @@ void DrawCRLFWhiteSpace(HWND hwnd, BOOL fPreview, TPSETTINGS settings, GCOLORTYP
 			HeapFree(g_hHeap, 0, pTemp);
 	}
 	if(settings.showWS){
+		//can stay NULL when showing only CR/LF without tabs/spaces
 		if(hPenOld)
 			SelectObject(hdc, hPenOld);
 		if(settings.showTabs)

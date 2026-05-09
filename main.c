@@ -2039,7 +2039,8 @@ static int WinVer(void){
 	hNtdll = GetModuleHandleW(L"ntdll.dll");
 	pRtlGetVersion = hNtdll ? (PFN_RTLGETVERSION)GetProcAddress(hNtdll, "RtlGetVersion") : NULL;
 	if(!pRtlGetVersion || pRtlGetVersion(&osv) != 0){
-		//fallback to Vista+ behavior if version cannot be queried
+		//fallback to Vista + behavior if version cannot be queried
+		//(same result this function returns for all supported NT 5.1+ targets)
 		return 6;
 	}
 	if(osv.dwMajorVersion > 5 ){
