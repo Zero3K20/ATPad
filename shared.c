@@ -65,7 +65,7 @@ void SetMenuText(int id, const wchar_t * lcpSection, const wchar_t * lcpFile, wc
 
 	wchar_t 		szId[12];
 
-	_itow(id, szId, 10);
+	_itow_s(id, szId, ARRAYSIZE(szId), 10);
 	GetPrivateProfileStringW(lcpSection, szId, lpDefault, lpBuffer, 256, lcpFile);
 }
 
@@ -229,7 +229,7 @@ void SetControlText(HWND hwnd, int id, wchar_t * lpDefault, wchar_t * lpLangFile
 	wchar_t			szBuffer[512], szKey[16];
 
 	//set control text according to language file value
-	_itow(id, szKey, 10);
+	_itow_s(id, szKey, ARRAYSIZE(szKey), 10);
 	GetPrivateProfileStringW(S_CONTROLS, szKey, lpDefault, szBuffer, 512, lpLangFile);
 	SetDlgItemTextW(hwnd, id, szBuffer);
 }

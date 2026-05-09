@@ -479,7 +479,7 @@ void AddToHistory(HWND hwnd, int id){
 	WritePrivateProfileSectionW(szSection, NULL, g_Paths.sINI);
 	for(int i = 0; i < count; i++){
 		SendDlgItemMessageW(hwnd, id, CB_GETLBTEXT, i, (LPARAM)szBuffer);
-		_itow(i + 1, szKey, 10);
+		_itow_s(i + 1, szKey, ARRAYSIZE(szKey), 10);
 		WritePrivateProfileStringW(szSection, szKey, szBuffer, g_Paths.sINI);
 	}
 }
@@ -701,7 +701,7 @@ static void ShowReplaceResults(wchar_t * lpText, int number){
 	StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L" \"");
 	StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), lpText);
 	StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L"\": ");
-	_ltow(number, szNumber, 10);
+	_ltow_s(number, szNumber, ARRAYSIZE(szNumber), 10);
 	StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), szNumber);
 	MessageBoxW(g_hMain, szBuffer, PROGRAM_NAME, MB_OK);
 }

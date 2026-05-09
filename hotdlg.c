@@ -229,7 +229,7 @@ static void InsertCommands(HMENU hMenu, HTREEITEM htiParent){
 			SendMessageW(g_hMain, TBNPM_GET_MENU_TXT, mi.wID, (LPARAM)szBuffer);
 			if(wcslen(szBuffer) > 0){
 				ZeroMemory(&acc, sizeof(acc));
-				wcstok(szBuffer, L"\t", &ptr);
+				wcstok_s(szBuffer, L"\t", &ptr);
 				acc.acc.cmd = mi.wID;
 				SendMessageW(g_hMain, TBNPM_GET_ACC, 0, (LPARAM)&acc);
 				if(mi.hSubMenu){

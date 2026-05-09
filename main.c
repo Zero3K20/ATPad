@@ -2231,7 +2231,7 @@ static void AddToLastSession(wchar_t * lpPath, P_TPEDIT pE){
 	qsort(m_LastOtherIndices, m_LastOtherFiles, sizeof(int), Compare);
 	while(InOtherLastIndices(index))
 		index++;
-	_itow(index, szKey, 10); 
+	_itow_s(index, szKey, ARRAYSIZE(szKey), 10); 
 	AddValueToRecentLast(S_LASTSESSION, szKey, szPattern, szPRemovable, lpPath);
 	//store bookmarks
 	StoreBookmarks(S_LASTS_BOOKMARKS, pE);
@@ -2380,7 +2380,7 @@ static void RecreateLastSession(void){
 		if(pE && pE->status == ST_FILE){
 			while(InOtherLastIndices(index))
 				index++;
-			_itow(index, szKey, 10);
+			_itow_s(index, szKey, ARRAYSIZE(szKey), 10);
 			ConstructINIKey(szPattern, ARRAYSIZE(szPattern), pE->szLongName);
 			// if(!m_RemovableDrive){
 				// SAFE_WCSCPY(szPattern, m_MACAddress);
@@ -2522,7 +2522,7 @@ static void LoadRecentFiles(void){
 						}
 					}
 					else{
-						_itow(temp, szPath, 10);
+						_itow_s(temp, szPath, ARRAYSIZE(szPath), 10);
 						if(temp < 10)
 							SAFE_WCSCAT(szPath, L"    ");
 						else
@@ -2615,7 +2615,7 @@ static void StoreBookmarks(wchar_t * lpSection, P_TPEDIT pE){
 	SAFE_WCSCAT(szPRemovable, pE->szLongName);
 	if(pB){
 		while(pB){
-			_ltow(pB->line, szNumber, 10);
+			_ltow_s(pB->line, szNumber, ARRAYSIZE(szNumber), 10);
 			SAFE_WCSCAT(szBookmarks, szNumber);
 			SAFE_WCSCAT(szBookmarks, DELIMETER);
 			pB = pB->next;
@@ -2682,7 +2682,7 @@ static void AddToRecentFiles(P_TPEDIT pE, BOOL fAddToMenu){
 		}
 		if(fDelete){
 			//get recent path #1
-			_itow(m_RecentIndices[0], szDel, 10);
+			_itow_s(m_RecentIndices[0], szDel, ARRAYSIZE(szDel), 10);
 			GetPrivateProfileStringW(S_RECENT_FILES, szDel, NULL, szPath, MAX_PATH, g_Paths.sINI);
 			//shift recent paths up
 			number = ShiftRecentFilesUp();
@@ -2690,7 +2690,7 @@ static void AddToRecentFiles(P_TPEDIT pE, BOOL fAddToMenu){
 			if(wcslen(szPath) > 0)
 				WritePrivateProfileStringW(S_RECENT_BOOKMARKS, szPath, NULL, g_Paths.sINI);
 		}
-		_itow(number, szKey, 10);
+		_itow_s(number, szKey, ARRAYSIZE(szKey), 10);
 		ConstructINIKey(szPath, ARRAYSIZE(szPath), pE->szLongName);
 		// if(!m_RemovableDrive){
 			// SAFE_WCSCPY(szPath, m_MACAddress);
@@ -2723,8 +2723,8 @@ static int ShiftRecentFilesUp(void){
 	register int	i;
 
 	for(i = 0; i < RECENT_FILES_MAX - 1; i++){
-		_itow(m_RecentIndices[i], szKey1, 10);
-		_itow(m_RecentIndices[i + 1], szKey2, 10);
+		_itow_s(m_RecentIndices[i], szKey1, ARRAYSIZE(szKey1), 10);
+		_itow_s(m_RecentIndices[i + 1], szKey2, ARRAYSIZE(szKey2), 10);
 		GetPrivateProfileStringW(S_RECENT_FILES, szKey2, NULL, szTemp, MAX_PATH, g_Paths.sINI);
 		WritePrivateProfileStringW(S_RECENT_FILES, szKey1, szTemp, g_Paths.sINI);
 	}
@@ -2881,7 +2881,7 @@ static void WriteAccelerators(void){
 	//remove previous values
 	WritePrivateProfileSectionW(S_ACCELERATORS, NULL, g_Paths.sINI);
 	for(int i = 0; i < m_AccCount; i++, p++){
-		_itow(p->cmd, szKey, 10);
+		_itow_s(p->cmd, szKey, ARRAYSIZE(szKey), 10);
 		WritePrivateProfileStructW(S_ACCELERATORS, szKey, p, sizeof(ACCEL), g_Paths.sINI);
 	}
 }
@@ -4608,8 +4608,8 @@ static void ShowCurrentPositionWrap(HWND hEdit, CHARRANGE chrg){
 static void PrintCurrentPosition(int x, int y){
 	wchar_t			row[128], col[128], szBuffer[256];
 
-	_itow(x, row, 10);
-	_itow(y, col, 10);
+	_itow_s(x, row, ARRAYSIZE(row), 10);
+	_itow_s(y, col, ARRAYSIZE(col), 10);
 	SAFE_WCSCPY(szBuffer, g_Strings.sLine);
 	SAFE_WCSCAT(szBuffer, L" ");
 	SAFE_WCSCAT(szBuffer, row);
@@ -5116,7 +5116,7 @@ static void GetTempSaveName(wchar_t * lpLongName, wchar_t * lpTempSave, size_t c
 	wchar_t			szTempName[128], * pName;
 
 	GetTempPathW(MAX_PATH, lpTempSave);
-	_ltow(GetTickCount(), szTempName, 10);
+	_ltow_s(GetTickCount(), szTempName, ARRAYSIZE(szTempName), 10);
 	if(fGetExtension){
 		pName = PathFindExtensionW(lpLongName);
 		SAFE_WCSCAT(szTempName, pName);
@@ -5850,7 +5850,7 @@ static void SetTrayTip(void){
 	SAFE_WCSCAT(szTip, L"\n");
 	SAFE_WCSCAT(szTip, g_Strings.sDocsTotal);
 	SAFE_WCSCAT(szTip, L" ");
-	_itow(TabCtrl_GetItemCount(m_hTabMain), szBuffer, 10);
+	_itow_s(TabCtrl_GetItemCount(m_hTabMain), szBuffer, ARRAYSIZE(szBuffer), 10);
 	SAFE_WCSCAT(szTip, szBuffer);
 	SAFE_WCSCAT(szTip, L"\n");
 	SAFE_WCSCAT(szTip, g_Strings.sDocsCurrent);

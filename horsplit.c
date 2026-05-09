@@ -201,7 +201,7 @@ static LRESULT CALLBACK HSplit_WndProc (HWND hwnd, UINT msg, WPARAM wParam, LPAR
 			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L" \"");
 			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), g_SearchString);
 			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L"\": ");
-			_ltow(wParam, szNumber, 10);
+			_ltow_s(wParam, szNumber, ARRAYSIZE(szNumber), 10);
 			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), szNumber);
 			SendMessageW(m_hListFind, LB_INSERTSTRING, 0, (LPARAM)szBuffer);
 			return TRUE;
@@ -215,10 +215,10 @@ static LRESULT CALLBACK HSplit_WndProc (HWND hwnd, UINT msg, WPARAM wParam, LPAR
 			StringCchCopyW(szBuffer, ARRAYSIZE(szBuffer), L"\"");
 			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), (wchar_t *)wParam);
 			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L"\" (");
-			_ltow(p->row, szNumber, 10);
+			_ltow_s(p->row, szNumber, ARRAYSIZE(szNumber), 10);
 			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), szNumber);
 			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L", ");
-			_ltow(p->col, szNumber, 10);
+			_ltow_s(p->col, szNumber, ARRAYSIZE(szNumber), 10);
 			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), szNumber);
 			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L")");
 			*szLine = MAX_LINE_SIZE;
@@ -351,7 +351,7 @@ static LRESULT CALLBACK PlaceHolder_WndProc (HWND hwnd, UINT msg, WPARAM wParam,
 			case IDM_CLOSE_PANE:{
 				wchar_t		szLang[MAX_PATH], szId[32];
 				
-				_itow(lpnmhdr->idFrom, szId, 10);
+				_itow_s(lpnmhdr->idFrom, szId, ARRAYSIZE(szId), 10);
 				StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
 				StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 				GetPrivateProfileStringW(S_MENU, szId, L"Close", szTooltip, 128, szLang);
@@ -527,7 +527,7 @@ static void InsertTab(int id, wchar_t * lpLang, int imgID){
 	wchar_t		szBuffer[128], szDefault[128], szKey[32];
 	RECT		rc;
 
-	_itow(id, szKey, 10);
+	_itow_s(id, szKey, ARRAYSIZE(szKey), 10);
 	ZeroMemory(&tci, sizeof(tci));
 	tci.mask = TCIF_PARAM | TCIF_IMAGE | TCIF_TEXT;
 	tci.iImage = imgID;
@@ -613,7 +613,7 @@ void ApplyPaneLanguage(void){
 	ti.cchTextMax = 128;
 	for(int i = 0; i < count; i++){
 		SendMessageW(m_hTabHSplit, TCM_GETITEMW, i, (LPARAM)&ti);
-		_itow(ti.lParam, szID, 10);
+		_itow_s(ti.lParam, szID, ARRAYSIZE(szID), 10);
 		GetPrivateProfileStringW(S_MENU, szID, szBuffer, szBuffer, 128, szLang);
 		SendMessageW(m_hTabHSplit, TCM_SETITEMW, i, (LPARAM)&ti);
 	}
@@ -625,7 +625,7 @@ void ApplyPaneLanguage(void){
 	for(int i = 0; i < 2; i++){
 		lvc.iSubItem = i;
 		SendMessageW(m_hListSnippets, LVM_GETCOLUMNW, i, (LPARAM)&lvc);
-		_itow(i, szID, 10);
+		_itow_s(i, szID, ARRAYSIZE(szID), 10);
 		GetPrivateProfileStringW(S_SNIPPETS_COLS, szID, L"Column", szBuffer, 256, szLang);
 		SendMessageW(m_hListSnippets, LVM_SETCOLUMNW, i, (LPARAM)&lvc);
 	}
@@ -741,7 +741,7 @@ static void Snippets_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 			szText = malloc(sizeof(wchar_t) * (size + 1));
 			if(!szText)
 				return;
-			_itow(size, szSize, 10);
+			_itow_s(size, szSize, ARRAYSIZE(szSize), 10);
 			GetDlgItemTextW(hwnd, IDC_EDT_SNP_TEXT, szText, size + 1);
 			ReplaceCRLFForward(szText);
 			WritePrivateProfileStringW(szName, L"size", szSize, g_Paths.sSnippetsPath);
