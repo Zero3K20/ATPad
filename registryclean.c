@@ -16,6 +16,10 @@
 
 #include "registryclean.h"
 
+#ifndef _stristr
+#define _stristr StrStrIA
+#endif
+
 /*-@@+@@------------------------------------------------------------------
  Procedure: CleanRegMUICache
  Created  : Thu Aug  9 17:59:15 2007

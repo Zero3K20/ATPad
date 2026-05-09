@@ -61,6 +61,10 @@
 #include "hotkeys.h"
 #include "hotdlg.h"
 
+#ifndef _wcsistr
+#define _wcsistr StrStrIW
+#endif
+
 #define NELEMS(a)  (sizeof(a) / sizeof((a)[0]))
 #define INRANGE(a, b, c)	((a >= b && a <= c) ? ((c > b) ? (0) : (2)) : ((a < b) ? -1 : 1))
 #define SAFE_WCSCPY(d, s) StringCchCopyW((d), ARRAYSIZE(d), (s))
@@ -630,7 +634,7 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 	HANDLE_MSG (hwnd, WM_DRAWITEM, Main_OnDrawItem);
 	HANDLE_MSG (hwnd, WM_MEASUREITEM, Main_OnMeasureItem);
 	HANDLE_MSG (hwnd, WM_ACTIVATE, Main_OnActivate);
-	HANDLE_MSG (hwnd, WM_DROPFILES, Main_OnDropFiles);
+	case WM_DROPFILES: Main_OnDropFiles(hwnd, (HDROP)wParam); return 0L;
 	HANDLE_MSG (hwnd, WM_SYSCOLORCHANGE, Main_OnSysColorChange);
 	HANDLE_MSG (hwnd, WM_MOVE, Main_OnMove);
 	HANDLE_MSG (hwnd, WM_INITMENUPOPUP, Main_OnInitMenuPopup);
