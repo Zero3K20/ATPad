@@ -1485,7 +1485,7 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		//reload current document
 		CHARRANGE		chrg;
 		BOOL			prevCheck, isBookmark = FALSE;
-		P_TPBMRK		pTemp;
+		P_TPBMRK		pTemp = NULL;
 
 		//store checking flag and prevent checking during reloading
 		prevCheck = m_CheckOuter;
@@ -4124,7 +4124,7 @@ static VOID CALLBACK RefreshTimerProc(HWND hwnd, UINT uMsg, UINT idEvent, DWORD 
 	P_TPEDIT		pE;
 	CHARRANGE		chrg;
 	BOOL			isBookmark = FALSE;
-	P_TPBMRK		pTemp;
+	P_TPBMRK		pTemp = NULL;
 
 	pE = GetHandleByChild(hwnd);
 	if(pE->bookmarks){
@@ -4913,7 +4913,7 @@ static void GetFileNameFromPath(wchar_t * lpPath, wchar_t * lpName, size_t cchNa
 }
 
 static P_TPEDIT LoadDocument(HWND hMain, wchar_t * lpNameFull, wchar_t * lpNameShort, P_TPEDIT pE, BOOL fAddTab){
-	P_TPEDIT		tpe;
+	P_TPEDIT		tpe = NULL;
 
 	m_CheckOuter = FALSE;
 	SetCursor(LoadCursor(NULL, IDC_WAIT));
@@ -4977,7 +4977,7 @@ static void CheckForOuterChanges(void){
 	WIN32_FIND_DATAW	fd;
 	BOOL				prevCheck, isBookmark = FALSE;
 	CHARRANGE			chrg;
-	P_TPBMRK			pTemp;
+	P_TPBMRK			pTemp = NULL;
 
 	pE = GetActiveHandle();
 	if(pE->status == ST_FILE){
