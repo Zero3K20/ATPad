@@ -24,6 +24,7 @@
 #include <commdlg.h>
 #include <richedit.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include "find.h"
 #include "stringconstants.h"
@@ -394,10 +395,15 @@ void CheckForSelection(HWND hwnd, int type){
 	hEdit = (HWND)SendMessageW(g_hMain, TBNPM_GETACTIVEEDIT, 0, 0);
 	SendMessageW(hEdit, EM_EXGETSEL, 0, (LPARAM)&chrg);
 	if(chrg.cpMax > chrg.cpMin){
+		int			selectionLen;
 		int			textLen;
 		wchar_t		*szBuffer, *pw;
 
-		textLen = chrg.cpMax - chrg.cpMin + 1;
+		selectionLen = chrg.cpMax - chrg.cpMin;
+		if(selectionLen <= 0 || selectionLen > INT_MAX - 1){
+			return;
+		}
+		textLen = selectionLen + 1;
 		szBuffer = malloc(sizeof(wchar_t) * textLen);
 		if(!szBuffer){
 			return;
@@ -634,6 +640,12 @@ static int ReplaceEditText(HWND hEdit, int params){
 	ZeroMemory(&ftx, sizeof(ftx));
 	SendMessageW(hEdit, EM_EXGETSEL, 0, (LPARAM)&ftx.chrg);
 
+	if(ftx.chrg.cpMax < ftx.chrg.cpMin){
+		return -1;
+	}
+	if(ftx.chrg.cpMax - ftx.chrg.cpMin > INT_MAX - 1){
+		return -1;
+	}
 	textLen = ftx.chrg.cpMax - ftx.chrg.cpMin + 1;
 	szBuffer = malloc(sizeof(wchar_t) * textLen);
 	if(!szBuffer){

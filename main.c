@@ -36,6 +36,7 @@
 #include <objbase.h>
 #include <Iphlpapi.h>
 #include <stdio.h>
+#include <limits.h>
 #include <wctype.h>
 
 #include "main.h"
@@ -2743,10 +2744,16 @@ static void GetRecentPath(int id, wchar_t * lpPath){
 
 static BOOL IsRecentInList(wchar_t * lpPath){
 	wchar_t			*szEntries, *pw, szPattern[MAX_PATH * 2];
+	int				entriesCount;
 	int				entriesSize;
 	DWORD			result;
 
-	entriesSize = (m_RecentFiles + m_OtherRecentFiles) * MAX_PATH * 2;
+	entriesCount = m_RecentFiles + m_OtherRecentFiles;
+	if(entriesCount <= 0)
+		return FALSE;
+	if(entriesCount > INT_MAX / (MAX_PATH * 2))
+		return FALSE;
+	entriesSize = entriesCount * MAX_PATH * 2;
 	if(entriesSize <= 0)
 		return FALSE;
 	szEntries = malloc(sizeof(wchar_t) * entriesSize);
