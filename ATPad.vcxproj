@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{6B9D17C8-3E71-4B43-A6F2-D2A7C8D81A00}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>ATPad</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <TargetName>ATPad</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level1</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>false</ConformanceMode>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)MyInclude;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <CompileAs>CompileAsC</CompileAs>
+      <CallingConvention>StdCall</CallingConvention>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;comctl32.lib;comdlg32.lib;advapi32.lib;delayimp.lib;msimg32.lib;shlwapi.lib;shell32.lib;version.lib;ole32.lib;wininet.lib;Iphlpapi.lib;glistbox.lib;gcolors.lib;gcpicker.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level1</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>false</ConformanceMode>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)MyInclude;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <CompileAs>CompileAsC</CompileAs>
+      <CallingConvention>StdCall</CallingConvention>
+      <Optimization>MaxSpeed</Optimization>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;comctl32.lib;comdlg32.lib;advapi32.lib;delayimp.lib;msimg32.lib;shlwapi.lib;shell32.lib;version.lib;ole32.lib;wininet.lib;Iphlpapi.lib;glistbox.lib;gcolors.lib;gcpicker.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="about.c" />
+    <ClCompile Include="find.c" />
+    <ClCompile Include="goto.c" />
+    <ClCompile Include="gradients.c" />
+    <ClCompile Include="hotdlg.c" />
+    <ClCompile Include="hotkeys.c" />
+    <ClCompile Include="horsplit.c" />
+    <ClCompile Include="linklabel.c" />
+    <ClCompile Include="main.c" />
+    <ClCompile Include="menu.c" />
+    <ClCompile Include="print.c" />
+    <ClCompile Include="registryclean.c" />
+    <ClCompile Include="send.c" />
+    <ClCompile Include="settings.c" />
+    <ClCompile Include="shared.c" />
+    <ClCompile Include="toolbar.c" />
+    <ClCompile Include="transparentbitmap.c" />
+    <ClCompile Include="traynotify.c" />
+    <ClCompile Include="update.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="aboutresource.rc" />
+    <ResourceCompile Include="main.rc" />
+    <ResourceCompile Include="mainresource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="about.h" />
+    <ClInclude Include="find.h" />
+    <ClInclude Include="globalvars.h" />
+    <ClInclude Include="goto.h" />
+    <ClInclude Include="gradients.h" />
+    <ClInclude Include="hotdlg.h" />
+    <ClInclude Include="hotkeys.h" />
+    <ClInclude Include="horsplit.h" />
+    <ClInclude Include="linklabel.h" />
+    <ClInclude Include="main.h" />
+    <ClInclude Include="menu.h" />
+    <ClInclude Include="numericconstants.h" />
+    <ClInclude Include="print.h" />
+    <ClInclude Include="registryclean.h" />
+    <ClInclude Include="send.h" />
+    <ClInclude Include="settings.h" />
+    <ClInclude Include="shared.h" />
+    <ClInclude Include="stringconstants.h" />
+    <ClInclude Include="toolbar.h" />
+    <ClInclude Include="transparentbitmap.h" />
+    <ClInclude Include="traynotify.h" />
+    <ClInclude Include="update.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="gcolors\gcolors.vcxproj">
+      <Project>{B0832667-77C9-4CFA-9BE6-BB98293C6012}</Project>
+    </ProjectReference>
+    <ProjectReference Include="gcpicker\gcpicker.vcxproj">
+      <Project>{2A5D0EA1-10A9-4AAF-AF8E-D857B4C16E33}</Project>
+    </ProjectReference>
+    <ProjectReference Include="glistbox\glistbox.vcxproj">
+      <Project>{45F7A35E-6F1D-4E44-8A44-7F098D84E101}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets" />
+</Project>
