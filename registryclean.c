@@ -16,6 +16,7 @@
 
 #include "registryclean.h"
 
+/* Shlwapi fallback for toolchains that don't provide _stristr. */
 #ifndef _stristr
 #define _stristr StrStrIA
 #endif

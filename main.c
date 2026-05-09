@@ -61,6 +61,7 @@
 #include "hotkeys.h"
 #include "hotdlg.h"
 
+/* Shlwapi fallback for toolchains that don't provide _wcsistr. */
 #ifndef _wcsistr
 #define _wcsistr StrStrIW
 #endif

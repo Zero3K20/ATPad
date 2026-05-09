@@ -5,6 +5,11 @@
 #include <commctrl.h>
 #include "menu.h"
 
+/*
+ * VS2019/Windows SDK compatibility fallbacks:
+ * Some SDK header combinations do not provide these RichEdit_* helper macros
+ * that older toolchains exposed via windowsx-style headers.
+ */
 #ifndef RichEdit_GetLineCount
 #define RichEdit_GetLineCount(hwndCtl) ((int)SendMessage((hwndCtl), EM_GETLINECOUNT, 0, 0L))
 #endif
