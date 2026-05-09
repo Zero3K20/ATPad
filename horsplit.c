@@ -890,24 +890,21 @@ static void LoadSnippets(void){
 				if(size > 0){
 					wchar_t		*szText;
 					szText = malloc(sizeof(wchar_t) * (size + 1));
-					if(!szText){
-						while(*pw++)
-							;
-						continue;
+					if(szText){
+						GetPrivateProfileStringW(pw, L"text", NULL, szText, size + 1, g_Paths.sSnippetsPath);
+						index = ListView_GetItemCount(m_hListSnippets);
+						ZeroMemory(&lvi, sizeof(lvi));
+						lvi.mask = LVIF_IMAGE | LVIF_TEXT;
+						lvi.iImage = 5;
+						lvi.pszText = pw;
+						lvi.iItem = index;
+						SendMessageW(m_hListSnippets, LVM_INSERTITEMW, 0, (LPARAM)&lvi);
+						lvi.iSubItem = 1;
+						lvi.pszText = szText;
+						ReplaceCRLFBySpace(szText);
+						SendMessageW(m_hListSnippets, LVM_SETITEMW, 0, (LPARAM)&lvi);
+						free(szText);
 					}
-					GetPrivateProfileStringW(pw, L"text", NULL, szText, size + 1, g_Paths.sSnippetsPath);
-					index = ListView_GetItemCount(m_hListSnippets);
-					ZeroMemory(&lvi, sizeof(lvi));
-					lvi.mask = LVIF_IMAGE | LVIF_TEXT;
-					lvi.iImage = 5;
-					lvi.pszText = pw;
-					lvi.iItem = index;
-					SendMessageW(m_hListSnippets, LVM_INSERTITEMW, 0, (LPARAM)&lvi);
-					lvi.iSubItem = 1;
-					lvi.pszText = szText;
-					ReplaceCRLFBySpace(szText);
-					SendMessageW(m_hListSnippets, LVM_SETITEMW, 0, (LPARAM)&lvi);
-					free(szText);
 				}
 			}
 			while(*pw++)
