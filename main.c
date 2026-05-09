@@ -2754,8 +2754,6 @@ static BOOL IsRecentInList(wchar_t * lpPath){
 	if(entriesCount > INT_MAX / (MAX_PATH * 2))
 		return FALSE;
 	entriesSize = entriesCount * MAX_PATH * 2;
-	if(entriesSize <= 0)
-		return FALSE;
 	szEntries = malloc(sizeof(wchar_t) * entriesSize);
 	if(!szEntries)
 		return FALSE;

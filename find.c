@@ -400,7 +400,7 @@ void CheckForSelection(HWND hwnd, int type){
 		wchar_t		*szBuffer, *pw;
 
 		selectionLen = chrg.cpMax - chrg.cpMin;
-		if(selectionLen <= 0 || selectionLen > INT_MAX - 1){
+		if(selectionLen > INT_MAX - 1){
 			return;
 		}
 		textLen = selectionLen + 1;

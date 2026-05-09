@@ -733,7 +733,8 @@ static void Snippets_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		if((int)GetPropW(hwnd, L"edit") > 0 || !SnippetExists(szName)){
 			LVITEMW		lvi;
 			int			size = GetWindowTextLengthW(GetDlgItem(hwnd, IDC_EDT_SNP_TEXT));
-			wchar_t		*szText, szSize[256];
+			wchar_t		*szText;
+			wchar_t		szSize[256];
 			int			index = ListView_GetItemCount(m_hListSnippets);
 
 			szText = malloc(sizeof(wchar_t) * (size + 1));
