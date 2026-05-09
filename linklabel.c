@@ -102,6 +102,7 @@ HWND CreateLinkLableW(HWND hParent, HINSTANCE hInstance, wchar_t * lpText, int x
 
 static void SetLLText(HWND hwnd, char * lpText){
 	char		* pText;
+	size_t		textLen;
 	SIZE		sz;
 	HDC			hdc;
 	int			state;
@@ -110,8 +111,9 @@ static void SetLLText(HWND hwnd, char * lpText){
 	pText = (char *)GetWindowLongPtr(hwnd, 0);
 	if(pText)
 		free(pText);
-	pText = (char *)calloc(strlen(lpText) + 1, sizeof(char));
-	StringCchCopyA(pText, strlen(lpText) + 1, lpText);
+	textLen = strlen(lpText);
+	pText = (char *)calloc(textLen + 1, sizeof(char));
+	StringCchCopyA(pText, textLen + 1, lpText);
 	SetWindowLongPtr(hwnd, 0, (LONG_PTR)pText);
 	hdc = GetDC(hwnd);
 	state = SaveDC(hdc);

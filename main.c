@@ -648,11 +648,11 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 			MessageBoxW(hwnd, g_Strings.sSameVersion, g_Strings.sCheckUpdate, MB_OK | MB_ICONINFORMATION);
 		return TRUE;
 	case UPDM_GETVERSION:
-		StringCchCopyA((char *)wParam, ARRAYSIZE(m_Version), m_Version);
+		StringCchCopyA((char *)wParam, UPDM_VERSION_SIZE, m_Version);
 		return TRUE;
 	case UPDM_GETSTRINGS:
-		StringCchCopyA((char *)wParam, sizeof(UPDATE_CHECK_URL), UPDATE_CHECK_URL);
-		StringCchCopyA((char *)lParam, sizeof("/version.txt"), "/version.txt");
+		StringCchCopyA((char *)wParam, UPDM_ADDRESS_SIZE, UPDATE_CHECK_URL);
+		StringCchCopyA((char *)lParam, UPDM_FILE_SIZE, "/version.txt");
 		return TRUE;
 	case TBNPM_GET_MENU_TXT:
 		GetMIText(m_MainMenus, NELEMS(m_MainMenus), wParam, (wchar_t *)lParam);
