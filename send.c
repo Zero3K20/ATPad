@@ -27,7 +27,7 @@ static void ReplaceExtention(char * lpSource, char * lpDest);
 
 static ULONG (PASCAL *SendMAPIMail)(ULONG, ULONG_PTR, MapiMessage*, FLAGS, ULONG);
 
-BOOL SendAsAttachment(HWND hParent, wchar_t * lpAttachment, wchar_t * lpSubject, wchar_t * lpTemp){
+BOOL SendAsAttachment(HWND hParent, wchar_t * lpAttachment, wchar_t * lpSubject, wchar_t * lpTemp, size_t cchTemp){
 
 	HINSTANCE 		hMAPI;
 	char			szFileName[MAX_PATH], szPath[MAX_PATH], szSubject[MAX_PATH], szTempANSI[MAX_PATH];
@@ -58,7 +58,7 @@ BOOL SendAsAttachment(HWND hParent, wchar_t * lpAttachment, wchar_t * lpSubject,
 		MultiByteToWideChar(CP_ACP, 0, szTempANSI, -1, szTempFileName, MAX_PATH);
 		StringCchCopyA(szFileName, ARRAYSIZE(szFileName), szTempANSI);
 		CopyFileW(lpAttachment, szTempFileName, FALSE);
-		StringCchCopyW(lpTemp, MAX_PATH, szTempFileName);
+		StringCchCopyW(lpTemp, cchTemp, szTempFileName);
 	}
 	StringCchCopyA(szPath, ARRAYSIZE(szPath), szFileName);
 	if(lpSubject){

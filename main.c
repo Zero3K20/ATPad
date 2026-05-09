@@ -1352,7 +1352,7 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 				//if document is file
 				if(!pE->changed){
 					//if no changes have been made
-					SendAsAttachment(hwnd, pE->szLongName, EMAIL_SUBJECT, szTemp);
+					SendAsAttachment(hwnd, pE->szLongName, EMAIL_SUBJECT, szTemp, ARRAYSIZE(szTemp));
 					if(wcslen(szTemp) > 0){
 						DeleteFileW(szTemp);
 					}
@@ -1368,7 +1368,7 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 					case IDYES:
 						//save file and send
 						SendMessageW(hwnd, WM_COMMAND, MAKEWPARAM(IDM_SAVE, 0), 0);
-						SendAsAttachment(hwnd, pE->szLongName, EMAIL_SUBJECT, szTemp);
+						SendAsAttachment(hwnd, pE->szLongName, EMAIL_SUBJECT, szTemp, ARRAYSIZE(szTemp));
 						if(wcslen(szTemp) > 0){
 							DeleteFileW(szTemp);
 						}
@@ -1378,7 +1378,7 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 						GetTempSaveName(pE->szLongName, szSaveTemp, TRUE);
 						m_CurrType = pE->type;
 						SaveFile(szSaveTemp, pE);
-						SendAsAttachment(hwnd, szSaveTemp, EMAIL_SUBJECT, szTemp);
+						SendAsAttachment(hwnd, szSaveTemp, EMAIL_SUBJECT, szTemp, ARRAYSIZE(szTemp));
 						if(wcslen(szTemp) > 0){
 							DeleteFileW(szTemp);
 						}
@@ -1402,7 +1402,7 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 					case IDYES:{
 						//save and send
 						SendMessageW(hwnd, WM_COMMAND, MAKEWPARAM(IDM_SAVE, 0), 0);
-						SendAsAttachment(hwnd, pE->szLongName, EMAIL_SUBJECT, szTemp);
+						SendAsAttachment(hwnd, pE->szLongName, EMAIL_SUBJECT, szTemp, ARRAYSIZE(szTemp));
 						if(wcslen(szTemp) > 0){
 							DeleteFileW(szTemp);
 						}
@@ -1413,7 +1413,7 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 						GetTempSaveName(pE->szLongName, szSaveTemp, FALSE);
 						m_CurrType = pE->type;
 						SaveFile(szSaveTemp, pE);
-						SendAsAttachment(hwnd, szSaveTemp, EMAIL_SUBJECT, szTemp);
+						SendAsAttachment(hwnd, szSaveTemp, EMAIL_SUBJECT, szTemp, ARRAYSIZE(szTemp));
 						if(wcslen(szTemp) > 0){
 							DeleteFileW(szTemp);
 						}
