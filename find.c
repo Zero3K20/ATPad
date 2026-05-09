@@ -398,10 +398,8 @@ void CheckForSelection(HWND hwnd, int type){
 		wchar_t		*szBuffer, *pw;
 
 		textLen = chrg.cpMax - chrg.cpMin + 1;
-		szBuffer = NULL;
-		pw = NULL;
 		szBuffer = malloc(sizeof(wchar_t) * textLen);
-		pw = malloc(sizeof(wchar_t) * textLen);
+		pw = szBuffer ? malloc(sizeof(wchar_t) * textLen) : NULL;
 		if(!szBuffer || !pw){
 			free(szBuffer);
 			free(pw);
