@@ -733,9 +733,12 @@ static void Snippets_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		if((int)GetPropW(hwnd, L"edit") > 0 || !SnippetExists(szName)){
 			LVITEMW		lvi;
 			int			size = GetWindowTextLengthW(GetDlgItem(hwnd, IDC_EDT_SNP_TEXT));
-			wchar_t		szText[size + 1], szSize[256];
+			wchar_t		*szText, szSize[256];
 			int			index = ListView_GetItemCount(m_hListSnippets);
 
+			szText = malloc(sizeof(wchar_t) * (size + 1));
+			if(!szText)
+				return;
 			_itow(size, szSize, 10);
 			GetDlgItemTextW(hwnd, IDC_EDT_SNP_TEXT, szText, size + 1);
 			ReplaceCRLFForward(szText);
@@ -757,6 +760,7 @@ static void Snippets_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 			lvi.pszText = szText;
 			ReplaceCRLFBySpace(szText);
 			SendMessageW(m_hListSnippets, LVM_SETITEMW, 0, (LPARAM)&lvi);
+			free(szText);
 			RemovePropW(hwnd, L"edit");
 			EndDialog(hwnd, IDOK);
 		}
@@ -805,10 +809,14 @@ static BOOL Snippets_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 		SetDlgItemTextW(hwnd, IDC_EDT_SNP_NAME, szBuffer);
 		size = GetPrivateProfileIntW(szBuffer, L"size", 0, g_Paths.sSnippetsPath);
 		if(size > 0){
-			wchar_t		szText[size + 1];
+			wchar_t		*szText;
+			szText = malloc(sizeof(wchar_t) * (size + 1));
+			if(!szText)
+				return FALSE;
 			GetPrivateProfileStringW(szBuffer, L"text", NULL, szText, size + 1, g_Paths.sSnippetsPath);
 			ReplaceCRLFBackward(szText);
 			SetDlgItemTextW(hwnd, IDC_EDT_SNP_TEXT, szText);
+			free(szText);
 		}
 	}
 	else{
@@ -880,7 +888,13 @@ static void LoadSnippets(void){
 			if(*pw && *pw != 31888){
 				size = GetPrivateProfileIntW(pw, L"size", 0, g_Paths.sSnippetsPath);
 				if(size > 0){
-					wchar_t		szText[size + 1];
+					wchar_t		*szText;
+					szText = malloc(sizeof(wchar_t) * (size + 1));
+					if(!szText){
+						while(*pw++)
+							;
+						continue;
+					}
 					GetPrivateProfileStringW(pw, L"text", NULL, szText, size + 1, g_Paths.sSnippetsPath);
 					index = ListView_GetItemCount(m_hListSnippets);
 					ZeroMemory(&lvi, sizeof(lvi));
@@ -893,6 +907,7 @@ static void LoadSnippets(void){
 					lvi.pszText = szText;
 					ReplaceCRLFBySpace(szText);
 					SendMessageW(m_hListSnippets, LVM_SETITEMW, 0, (LPARAM)&lvi);
+					free(szText);
 				}
 			}
 			while(*pw++)
@@ -932,11 +947,15 @@ static void InsertSnippet(void){
 	SendMessageW(m_hListSnippets, LVM_GETITEMW, 0, (LPARAM)&lvi);
 	size = GetPrivateProfileIntW(szBuffer, L"size", 0, g_Paths.sSnippetsPath);
 	if(size > 0){
-		wchar_t		szText[size + 1];
+		wchar_t		*szText;
+		szText = malloc(sizeof(wchar_t) * (size + 1));
+		if(!szText)
+			return;
 		GetPrivateProfileStringW(szBuffer, L"text", NULL, szText, size + 1, g_Paths.sSnippetsPath);
 		ReplaceCRLFBackward(szText);
 		SendMessageW(hEdit, EM_REPLACESEL, TRUE, (LPARAM)szText);
 		SetFocus(hEdit);
+		free(szText);
 	}
 }
 

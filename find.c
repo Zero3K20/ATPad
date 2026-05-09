@@ -394,13 +394,23 @@ void CheckForSelection(HWND hwnd, int type){
 	hEdit = (HWND)SendMessageW(g_hMain, TBNPM_GETACTIVEEDIT, 0, 0);
 	SendMessageW(hEdit, EM_EXGETSEL, 0, (LPARAM)&chrg);
 	if(chrg.cpMax > chrg.cpMin){
-		wchar_t		szBuffer[chrg.cpMax - chrg.cpMin + 1], pw[chrg.cpMax - chrg.cpMin + 1];
+		int			textLen;
+		wchar_t		*szBuffer, *pw;
+
+		textLen = chrg.cpMax - chrg.cpMin + 1;
+		szBuffer = malloc(sizeof(wchar_t) * textLen);
+		pw = malloc(sizeof(wchar_t) * textLen);
+		if(!szBuffer || !pw){
+			free(szBuffer);
+			free(pw);
+			return;
+		}
 
 		EnableWindow(GetDlgItem(hwnd, IDC_CMD_FIND_NEXT), TRUE);
 		EnableWindow(GetDlgItem(hwnd, IDC_CMD_FIND_ALL), TRUE);
 		SendMessageW(hEdit, EM_GETSELTEXT, 0, (LPARAM)pw);
 		
-		for(int i = 0; i < chrg.cpMax - chrg.cpMin + 1; i++){
+		for(int i = 0; i < textLen; i++){
 			if(pw[i] != '\n' && pw[i] != '\r'){
 				szBuffer[i] = pw[i];
 			}
@@ -410,6 +420,8 @@ void CheckForSelection(HWND hwnd, int type){
 			}
 		}
 		SetWindowTextW(GetDlgItem(hwnd, IDC_CBO_FIND_WHAT), szBuffer);
+		free(szBuffer);
+		free(pw);
 	}
 	else{
 		if(wcslen(g_SearchString) > 0){
@@ -611,6 +623,8 @@ static void ReplaceAll(HWND hwnd){
 static int ReplaceEditText(HWND hEdit, int params){
 	FINDTEXTEXW		ftx;
 	int				result;
+	int				textLen;
+	wchar_t			*szBuffer;
 
 	if(params == -1)
 		params = g_FParam;
@@ -618,11 +632,16 @@ static int ReplaceEditText(HWND hEdit, int params){
 	ZeroMemory(&ftx, sizeof(ftx));
 	SendMessageW(hEdit, EM_EXGETSEL, 0, (LPARAM)&ftx.chrg);
 
-	wchar_t			szBuffer[ftx.chrg.cpMax - ftx.chrg.cpMin + 1];
+	textLen = ftx.chrg.cpMax - ftx.chrg.cpMin + 1;
+	szBuffer = malloc(sizeof(wchar_t) * textLen);
+	if(!szBuffer){
+		return -1;
+	}
 	SendMessageW(hEdit, EM_GETSELTEXT, 0, (LPARAM)szBuffer);
 	if(wcscmp(szBuffer, g_SearchString) == 0){
 		SendMessageW(hEdit, EM_REPLACESEL, TRUE, (LPARAM)g_ReplaceString);
 	}
+	free(szBuffer);
 	if((g_FParam & FR_DOWN) == FR_DOWN && *g_ReplaceString)
 		ftx.chrg.cpMin = ftx.chrg.cpMax;
 	ftx.chrg.cpMax = -1;

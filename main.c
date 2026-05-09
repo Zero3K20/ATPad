@@ -2742,12 +2742,22 @@ static void GetRecentPath(int id, wchar_t * lpPath){
 }
 
 static BOOL IsRecentInList(wchar_t * lpPath){
-	wchar_t			szEntries[(m_RecentFiles + m_OtherRecentFiles) * MAX_PATH * 2], *pw, szPattern[MAX_PATH * 2];
+	wchar_t			*szEntries, *pw, szPattern[MAX_PATH * 2];
+	int				entriesSize;
 	DWORD			result;
 
-	result = GetPrivateProfileSectionW(S_RECENT_FILES, szEntries, (m_RecentFiles + m_OtherRecentFiles) * MAX_PATH * 2, g_Paths.sINI);
-	if(result == 0)
+	entriesSize = (m_RecentFiles + m_OtherRecentFiles) * MAX_PATH * 2;
+	if(entriesSize <= 0)
 		return FALSE;
+	szEntries = malloc(sizeof(wchar_t) * entriesSize);
+	if(!szEntries)
+		return FALSE;
+	result = GetPrivateProfileSectionW(S_RECENT_FILES, szEntries, entriesSize, g_Paths.sINI);
+	if(result == 0)
+	{
+		free(szEntries);
+		return FALSE;
+	}
 	if(!m_RemovableDrive){
 		wcscpy(szPattern, m_MACAddress);
 		wcscat(szPattern, DELIMETER);
@@ -2770,13 +2780,16 @@ static BOOL IsRecentInList(wchar_t * lpPath){
 		if(*pw && *pw != 31888){
 			while(*pw++ != '=')
 				;
-			if(wcscmp(pw, szPattern) == 0)
+			if(wcscmp(pw, szPattern) == 0){
+				free(szEntries);
 				return TRUE;
+			}
 		}
 		while(*pw++)
 			;
 	}
 
+	free(szEntries);
 	return FALSE;
 }
 
