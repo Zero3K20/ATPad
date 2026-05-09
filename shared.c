@@ -239,11 +239,11 @@ void DrawLineNumbersRegular(HWND hwnd, HDC hdc, TPSETTINGS settings, GCOLORTYPE 
 	RECT		rc, rcLine, rcMargin, rcBookmark, rcLeft, rcRight;
 	HDC			hdcTemp;
 	HBITMAP		hbm, hbmOld;
-	HFONT		hOldF;
+	HFONT		hOldF = NULL;
 	COLORREF	cOldC;
 	wchar_t		szNumber[32];
 	POINT		pt;
-	HBRUSH		hBrush, hBrBm;
+	HBRUSH		hBrush = NULL, hBrBm;
 	long		first, last, temp, pos, charIndex, line, count;
 	HICON		hBmIcon;
 
@@ -379,7 +379,8 @@ void DrawLineNumbersRegular(HWND hwnd, HDC hdc, TPSETTINGS settings, GCOLORTYPE 
 	if(settings.showLines){
 		if(lnformat.cBack.sysIndex == -1)
 			DeleteObject(hBrush);
-		SelectObject(hdcTemp, hOldF);
+		if(hOldF)
+			SelectObject(hdcTemp, hOldF);
 		SetTextColor(hdcTemp, cOldC);
 	}
 	SelectObject(hdcTemp, hbmOld);
@@ -393,17 +394,17 @@ void DrawLineNumbersWrap(HWND hwnd, HDC hdc, TPSETTINGS settings, GCOLORTYPE ctB
 	RECT		rc, rcLine, rcMargin, rcLeft, rcRight, rcBookmark;
 	HDC			hdcTemp;
 	HBITMAP		hbm, hbmOld;
-	HFONT		hOldF;
+	HFONT		hOldF = NULL;
 	COLORREF	cOldC;
 	wchar_t		szNumber[32];
 	POINT		pt;
-	HBRUSH		hBrush, hBrBm;
+	HBRUSH		hBrush = NULL, hBrBm;
 	long		first, last, temp, pos, charIndex, line, count;
 	TEXTRANGEW	trg;
 	wchar_t		szChar[2];
 	BOOL		drawWrap = FALSE;
 	long		crCount = 0, addition = 0, start;
-	HANDLE		pTemp;
+	HANDLE		pTemp = NULL;
 	HICON		hIcon = NULL, hBmIcon = NULL;
 
 	//get bookmark icon
@@ -605,7 +606,8 @@ void DrawLineNumbersWrap(HWND hwnd, HDC hdc, TPSETTINGS settings, GCOLORTYPE ctB
 	if(settings.showLines){
 		if(lnformat.cBack.sysIndex == -1)
 			DeleteObject(hBrush);
-		SelectObject(hdcTemp, hOldF);
+		if(hOldF)
+			SelectObject(hdcTemp, hOldF);
 		SetTextColor(hdcTemp, cOldC);
 	}
 	SelectObject(hdcTemp, hbmOld);
@@ -624,10 +626,10 @@ void DrawCRLFWhiteSpace(HWND hwnd, BOOL fPreview, TPSETTINGS settings, GCOLORTYP
 	long		pos, count, last, cnt;
 	POINT		pt;
 	TEXTRANGEW	trg;
-	HANDLE		pTemp;
+	HANDLE		pTemp = NULL;
 	BITMAP		bmCR, bmLF;
-	HPEN		hPen, hPenOld = NULL;
-	HPEN		hPSpace;
+	HPEN		hPen = NULL, hPenOld = NULL;
+	HPEN		hPSpace = NULL;
 	HRGN		hRgn;
 	wchar_t		* pChar;
 
@@ -722,7 +724,8 @@ void DrawCRLFWhiteSpace(HWND hwnd, BOOL fPreview, TPSETTINGS settings, GCOLORTYP
 			SendMessageW(hwnd, EM_POSFROMCHAR, (WPARAM)&pt, i);
 			pt.y += (textHeight - 1) / 2;
 			if(i < trg.chrg.cpMax){
-				SelectObject(hdc, hPen);
+				if(hPen)
+					SelectObject(hdc, hPen);
 				SendMessageW(hwnd, EM_POSFROMCHAR, (WPARAM)&pt1, i + 1);
 				MoveToEx(hdc, pt.x + 1, pt.y, NULL);
 				LineTo(hdc, pt1.x - 1, pt.y);
@@ -738,7 +741,8 @@ void DrawCRLFWhiteSpace(HWND hwnd, BOOL fPreview, TPSETTINGS settings, GCOLORTYP
 			SendMessageW(hwnd, EM_POSFROMCHAR, (WPARAM)&pt, i);
 			pt.y += (textHeight - 1) / 2;
 			if(i < trg.chrg.cpMax){
-				SelectObject(hdc, hPSpace);
+				if(hPSpace)
+					SelectObject(hdc, hPSpace);
 				SendMessageW(hwnd, EM_POSFROMCHAR, (WPARAM)&pt1, i + 1);
 				MoveToEx(hdc, pt.x + (pt1.x - pt.x) / 2 - 1, pt.y - 1, NULL);
 				LineTo(hdc, pt.x + (pt1.x - pt.x) / 2 + 1, pt.y);
@@ -749,10 +753,12 @@ void DrawCRLFWhiteSpace(HWND hwnd, BOOL fPreview, TPSETTINGS settings, GCOLORTYP
 		trg.lpstrText++;
 	}
 	if(!fPreview){
-		HeapFree(g_hHeap, 0, pTemp);
+		if(pTemp)
+			HeapFree(g_hHeap, 0, pTemp);
 	}
 	if(settings.showWS){
-		SelectObject(hdc, hPenOld);
+		if(hPenOld)
+			SelectObject(hdc, hPenOld);
 		if(settings.showTabs)
 			DeleteObject(hPen);
 		if(settings.showSpaces)

@@ -2030,9 +2030,16 @@ static LRESULT CALLBACK EditProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 
 static int WinVer(void){
 	OSVERSIONINFOW	osv;
+	HMODULE			hNtdll;
+	LONG (WINAPI * pRtlGetVersion)(OSVERSIONINFOW *);
 
+	ZeroMemory(&osv, sizeof(osv));
 	osv.dwOSVersionInfoSize = sizeof(osv);
-	GetVersionExW(&osv);
+	hNtdll = GetModuleHandleW(L"ntdll.dll");
+	pRtlGetVersion = hNtdll ? (LONG (WINAPI *)(OSVERSIONINFOW *))GetProcAddress(hNtdll, "RtlGetVersion") : NULL;
+	if(!pRtlGetVersion || pRtlGetVersion(&osv) != 0){
+		return 6;
+	}
 	if(osv.dwMajorVersion > 5 ){
 		return 6;
 	}
