@@ -4160,15 +4160,11 @@ static void CheckViewItems(void){
 	ZeroMemory(&tci, sizeof(tci));
 	tci.mask = TCIF_PARAM;
 	if(!IsWindow(g_hSplit)){
-		CheckMenuItem(g_hMenu, IDM_F_R_FILES, MF_BYCOMMAND | MF_UNCHECKED);
-		CheckMenuItem(g_hMenu, IDM_SNIPPETS, MF_BYCOMMAND | MF_UNCHECKED);
-		return;
+		goto reset_items;
 	}
 	hTab = (HWND)SendMessageW(g_hSplit, TBNPM_GET_ASS_TAB, 0, 0);
 	if(!IsWindow(hTab)){
-		CheckMenuItem(g_hMenu, IDM_F_R_FILES, MF_BYCOMMAND | MF_UNCHECKED);
-		CheckMenuItem(g_hMenu, IDM_SNIPPETS, MF_BYCOMMAND | MF_UNCHECKED);
-		return;
+		goto reset_items;
 	}
 	count = TabCtrl_GetItemCount(hTab);
 	for(int i = 0; i < count; i++){
@@ -4189,6 +4185,11 @@ static void CheckViewItems(void){
 	}
 	CheckMenuItem(g_hMenu, IDM_SNIPPETS, MF_BYCOMMAND | flag);
 	flag = MF_UNCHECKED;
+	return;
+
+reset_items:
+	CheckMenuItem(g_hMenu, IDM_F_R_FILES, MF_BYCOMMAND | MF_UNCHECKED);
+	CheckMenuItem(g_hMenu, IDM_SNIPPETS, MF_BYCOMMAND | MF_UNCHECKED);
 }
 
 static VOID CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT idEvent, DWORD dwTime){
