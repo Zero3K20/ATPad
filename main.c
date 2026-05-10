@@ -878,16 +878,17 @@ static void Main_OnInitMenuPopup(HWND hwnd, HMENU hMenu, UINT item, BOOL fSystem
 	P_TPEDIT		pE;
 	HMENU			h1 = NULL;
 	HMENU 			h2 = NULL;
-	int				menuPos;
+	int				editMenuPos;
+	int				refreshMenuPos;
 
 	if(g_hMenu){
-		menuPos = GetMenuPosition(g_hMenu, IDM_EDIT);
-		if(menuPos >= 0){
-			h1 = GetSubMenu(g_hMenu, menuPos);
+		editMenuPos = GetMenuPosition(g_hMenu, IDM_EDIT);
+		if(editMenuPos >= 0){
+			h1 = GetSubMenu(g_hMenu, editMenuPos);
 			if(h1){
-				menuPos = GetMenuPosition(h1, IDM_REFRESH_EVERY);
-				if(menuPos >= 0){
-					h2 = GetSubMenu(h1, menuPos);
+				refreshMenuPos = GetMenuPosition(h1, IDM_REFRESH_EVERY);
+				if(refreshMenuPos >= 0){
+					h2 = GetSubMenu(h1, refreshMenuPos);
 				}
 			}
 		}
