@@ -678,7 +678,7 @@ static void PrepareAssMenuRecursive(HMENU hMenu, wchar_t * lpLangFile){
 			}
 
 			GetMIText(m_AssMenus, NELEMS(m_AssMenus), mi.wID, szDefault, ARRAYSIZE(szDefault));
-			SetMenuText(mi.wID, S_MENU, lpLangFile, szDefault, szText);
+			SetMenuText(mi.wID, S_MENU, lpLangFile, szDefault, szText, ARRAYSIZE(szText));
 			SetMIText(m_AssMenus, NELEMS(m_AssMenus), mi.wID, szText);
 			pmi = GetMItem(m_AssMenus, NELEMS(m_AssMenus), mi.wID);
 			if(pmi){
