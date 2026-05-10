@@ -32,18 +32,18 @@ static void AddKeyString(short key, wchar_t * lpKey, size_t cchKey);
 static const wchar_t *GetKeyText(short key);
 
 static const KEY_TEXT g_KeyTextMap[] = {
-	{ VK_A, L"A" }, { VK_B, L"B" }, { VK_C, L"C" }, { VK_D, L"D" }, { VK_E, L"E" }, { VK_F, L"F" },
-	{ VK_G, L"G" }, { VK_H, L"H" }, { VK_I, L"I" }, { VK_J, L"J" }, { VK_K, L"K" }, { VK_L, L"L" },
-	{ VK_M, L"M" }, { VK_N, L"N" }, { VK_O, L"O" }, { VK_P, L"P" }, { VK_Q, L"Q" }, { VK_R, L"R" },
-	{ VK_S, L"S" }, { VK_T, L"T" }, { VK_U, L"U" }, { VK_V, L"V" }, { VK_W, L"W" }, { VK_X, L"X" },
-	{ VK_Y, L"Y" }, { VK_Z, L"Z" }, { VK_ESCAPE, L"Esc" },
+	{ 'A', L"A" }, { 'B', L"B" }, { 'C', L"C" }, { 'D', L"D" }, { 'E', L"E" }, { 'F', L"F" },
+	{ 'G', L"G" }, { 'H', L"H" }, { 'I', L"I" }, { 'J', L"J" }, { 'K', L"K" }, { 'L', L"L" },
+	{ 'M', L"M" }, { 'N', L"N" }, { 'O', L"O" }, { 'P', L"P" }, { 'Q', L"Q" }, { 'R', L"R" },
+	{ 'S', L"S" }, { 'T', L"T" }, { 'U', L"U" }, { 'V', L"V" }, { 'W', L"W" }, { 'X', L"X" },
+	{ 'Y', L"Y" }, { 'Z', L"Z" }, { VK_ESCAPE, L"Esc" },
 	{ VK_F1, L"F1" }, { VK_F2, L"F2" }, { VK_F3, L"F3" }, { VK_F4, L"F4" }, { VK_F5, L"F5" }, { VK_F6, L"F6" },
 	{ VK_F7, L"F7" }, { VK_F8, L"F8" }, { VK_F9, L"F9" }, { VK_F10, L"F10" }, { VK_F11, L"F11" }, { VK_F12, L"F12" },
 	{ VK_BACK, L"Backspace" }, { VK_INSERT, L"Ins" }, { VK_HOME, L"Home" }, { VK_PRIOR, L"PgUp" }, { VK_NEXT, L"PgDn" },
 	{ VK_END, L"End" }, { VK_DELETE, L"Del" }, { VK_SPACE, L"Space" }, { VK_UP, L"Up" }, { VK_DOWN, L"Down" },
 	{ VK_LEFT, L"Left" }, { VK_RIGHT, L"Right" },
-	{ VK_0, L"0" }, { VK_1, L"1" }, { VK_2, L"2" }, { VK_3, L"3" }, { VK_4, L"4" },
-	{ VK_5, L"5" }, { VK_6, L"6" }, { VK_7, L"7" }, { VK_8, L"8" }, { VK_9, L"9" },
+	{ '0', L"0" }, { '1', L"1" }, { '2', L"2" }, { '3', L"3" }, { '4', L"4" },
+	{ '5', L"5" }, { '6', L"6" }, { '7', L"7" }, { '8', L"8" }, { '9', L"9" },
 	{ VK_NUMPAD0, L"Num 0" }, { VK_NUMPAD1, L"Num 1" }, { VK_NUMPAD2, L"Num 2" }, { VK_NUMPAD3, L"Num 3" }, { VK_NUMPAD4, L"Num 4" },
 	{ VK_NUMPAD5, L"Num 5" }, { VK_NUMPAD6, L"Num 6" }, { VK_NUMPAD7, L"Num 7" }, { VK_NUMPAD8, L"Num 8" }, { VK_NUMPAD9, L"Num 9" },
 	{ VK_PAUSE, L"Pause" }, { VK_ADD, L"+" }, { VK_SUBTRACT, L"-" }, { VK_MULTIPLY, L"*" }, { VK_DIVIDE, L"/" }, { VK_RETURN, L"Enter" }

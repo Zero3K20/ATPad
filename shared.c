@@ -250,7 +250,7 @@ void DrawLineNumbersRegular(HWND hwnd, HDC hdc, TPSETTINGS settings, GCOLORTYPE 
 	//get bookmark icon
 	hBmIcon = ImageList_GetIcon(g_ImlTab, 3, ILD_TRANSPARENT);
 	//get total lines count
-	count = RichEdit_GetLineCount(hwnd);
+	count = (int)SendMessage(hwnd, EM_GETLINECOUNT, 0, 0L);
 	SetBkMode(hdc, TRANSPARENT);
 	//get formatting rectangle
 	SendMessageW(hwnd, EM_GETRECT, 0, (LPARAM)&rc);
@@ -412,7 +412,7 @@ void DrawLineNumbersWrap(HWND hwnd, HDC hdc, TPSETTINGS settings, GCOLORTYPE ctB
 	//get wrap icon
 	hIcon = ImageList_GetIcon(hIml, ImageList_GetImageCount(hIml) - 1, ILD_TRANSPARENT);
 	//get total lines count
-	count = RichEdit_GetLineCount(hwnd);
+	count = (int)SendMessage(hwnd, EM_GETLINECOUNT, 0, 0L);
 	SetBkMode(hdc, TRANSPARENT);
 	//get control formatting rectangle
 	SendMessageW(hwnd, EM_GETRECT, 0, (LPARAM)&rc);
@@ -676,7 +676,7 @@ void DrawCRLFWhiteSpace(HWND hwnd, BOOL fPreview, TPSETTINGS settings, GCOLORTYP
 		pos = SendMessageW(hwnd, EM_CHARFROMPOS, 0, (LPARAM)&rc);
 		trg.chrg.cpMax = pos;
 		last = SendMessageW(hwnd, EM_EXLINEFROMCHAR, 0, pos);
-		count = RichEdit_GetLineCount(hwnd);
+		count = (int)SendMessage(hwnd, EM_GETLINECOUNT, 0, 0L);
 		if(count - last == 2){
 			trg.chrg.cpMax++;
 		}
@@ -912,7 +912,7 @@ void GetCurrentPositionRegular(HWND hEdit, CHARRANGE chrg, long * px, long * py)
 	gtx.flags = GTL_NUMCHARS | GTL_PRECISE;
 	gtx.codepage = 1200;
 	charCount = SendMessageW(hEdit, EM_GETTEXTLENGTHEX, (WPARAM)&gtx, 0);
-	count = RichEdit_GetLineCount(hEdit);
+	count = (int)SendMessage(hEdit, EM_GETLINECOUNT, 0, 0L);
 	SendMessageW(hEdit, EM_GETRECT, 0, (LPARAM)&rc);
 	rc.top = rc.bottom;
 	pos = SendMessageW(hEdit, EM_CHARFROMPOS, 0, (LPARAM)&rc);
@@ -943,7 +943,7 @@ void GetCurrentPositionWrap(HWND hEdit, CHARRANGE chrg, long * px, long * py){
 	gtx.flags = GTL_NUMCHARS | GTL_PRECISE;
 	gtx.codepage = 1200;
 	charCount = SendMessageW(hEdit, EM_GETTEXTLENGTHEX, (WPARAM)&gtx, 0);
-	count = RichEdit_GetLineCount(hEdit);
+	count = (int)SendMessage(hEdit, EM_GETLINECOUNT, 0, 0L);
 	
 	//find last visible line start position
 	SendMessageW(hEdit, EM_GETRECT, 0, (LPARAM)&rc);

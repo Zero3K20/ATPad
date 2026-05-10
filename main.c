@@ -61,11 +61,6 @@
 #include "hotkeys.h"
 #include "hotdlg.h"
 
-/* Shlwapi fallback for toolchains that don't provide _wcsistr. */
-#ifndef _wcsistr
-#define _wcsistr StrStrIW
-#endif
-
 #define NELEMS(a)  (sizeof(a) / sizeof((a)[0]))
 #define INRANGE(a, b, c)	((a >= b && a <= c) ? ((c > b) ? (0) : (2)) : ((a < b) ? -1 : 1))
 #define SAFE_WCSCPY(d, s) StringCchCopyW((d), ARRAYSIZE(d), (s))
@@ -365,27 +360,27 @@ static TBBUTTON		 	m_TBBtnArray[] = {{0,0,TBSTATE_ENABLED,TBSTYLE_SEP,0,0,0,0},
 						{0,0,TBSTATE_ENABLED,TBSTYLE_SEP,0,0,0,0},
 						{8,IDM_HELP,TBSTATE_ENABLED,TBSTYLE_BUTTON,0,0,0,0}
 						};
-static ACCEL			m_AccDef[] = {{FCONTROL | FVIRTKEY,VK_S,IDM_SAVE},
-						{FCONTROL | FVIRTKEY,VK_N,IDM_NEW},
-						{FCONTROL | FVIRTKEY,VK_O,IDM_OPEN},
-						{FCONTROL | FVIRTKEY,VK_P,IDM_PRINT},
+static ACCEL			m_AccDef[] = {{FCONTROL | FVIRTKEY,'S',IDM_SAVE},
+						{FCONTROL | FVIRTKEY,'N',IDM_NEW},
+						{FCONTROL | FVIRTKEY,'O',IDM_OPEN},
+						{FCONTROL | FVIRTKEY,'P',IDM_PRINT},
 						{FALT | FVIRTKEY,VK_F4,IDM_EXIT},
-						{FCONTROL | FVIRTKEY,VK_Z,IDM_UNDO},
-						{FCONTROL | FVIRTKEY,VK_Y,IDM_REDO},
-						{FCONTROL | FVIRTKEY,VK_X,IDM_CUT},
-						{FCONTROL | FVIRTKEY,VK_C,IDM_COPY},
-						{FCONTROL | FVIRTKEY,VK_V,IDM_PASTE},
-						{FCONTROL | FVIRTKEY,VK_A,IDM_SELECT_ALL},
-						{FCONTROL | FVIRTKEY,VK_F,IDM_FIND},
-						{FCONTROL | FVIRTKEY,VK_H,IDM_REPLACE},
+						{FCONTROL | FVIRTKEY,'Z',IDM_UNDO},
+						{FCONTROL | FVIRTKEY,'Y',IDM_REDO},
+						{FCONTROL | FVIRTKEY,'X',IDM_CUT},
+						{FCONTROL | FVIRTKEY,'C',IDM_COPY},
+						{FCONTROL | FVIRTKEY,'V',IDM_PASTE},
+						{FCONTROL | FVIRTKEY,'A',IDM_SELECT_ALL},
+						{FCONTROL | FVIRTKEY,'F',IDM_FIND},
+						{FCONTROL | FVIRTKEY,'H',IDM_REPLACE},
 						{FVIRTKEY,VK_F3,IDM_FIND_NEXT},
-						{FCONTROL | FVIRTKEY,VK_G,IDM_GOTO},
-						{FCONTROL | FSHIFT | FVIRTKEY,VK_A,IDM_SAVE_AS},
-						{FCONTROL | FSHIFT | FVIRTKEY,VK_S,IDM_SAVE_ALL},
+						{FCONTROL | FVIRTKEY,'G',IDM_GOTO},
+						{FCONTROL | FSHIFT | FVIRTKEY,'A',IDM_SAVE_AS},
+						{FCONTROL | FSHIFT | FVIRTKEY,'S',IDM_SAVE_ALL},
 						{FSHIFT | FVIRTKEY,VK_F4,IDM_BM_TOGGLE},
 						{FVIRTKEY,VK_F4,IDM_BM_NEXT},
-						{FCONTROL | FSHIFT | FVIRTKEY,VK_U,IDM_TO_UPPER},
-						{FCONTROL | FSHIFT | FVIRTKEY,VK_L,IDM_TO_LOWER},
+						{FCONTROL | FSHIFT | FVIRTKEY,'U',IDM_TO_UPPER},
+						{FCONTROL | FSHIFT | FVIRTKEY,'L',IDM_TO_LOWER},
 						{FVIRTKEY,VK_F5,IDM_REFRESH}
 						};
 static wchar_t			*m_RefDef[] = {L"Turn off", L"15 sec", L"30 sec", L"1 min", L"3 min", L"5 min", L"10 min", L"15 min", L"20 min", L"30 min"};
@@ -411,7 +406,7 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 	if((args & ARG_INI_PATH) == ARG_INI_PATH){
 		//INI file path has been set via command line
 		SAFE_WCSCPY(g_Paths.sINI, szINIPath);
-		if(!_wcsistr(g_Paths.sINI, INI_FILE)){
+		if(!StrStrIW(g_Paths.sINI, INI_FILE)){
 			if(IsLastBackslash(g_Paths.sINI))
 				SAFE_WCSCAT(g_Paths.sINI, INI_FILE);
 			else
@@ -1524,7 +1519,7 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		}
 		else if(g_Settings.preservePosition == POS_END){
 			//jump to the end of document
-			int		count = RichEdit_GetLineCount(pE->hEdit);
+			int		count = (int)SendMessage(pE->hEdit, EM_GETLINECOUNT, 0, 0L);
 			chrg.cpMin = SendMessageW(pE->hEdit, EM_LINEINDEX, count - 1, 0);
 			chrg.cpMax = chrg.cpMin;
 			SendMessageW(pE->hEdit, EM_EXSETSEL, 0, (LPARAM)&chrg);
@@ -1958,7 +1953,7 @@ static BOOL SaveFile(wchar_t * lpLongName, P_TPEDIT pE){
 			WriteFile(hFile, m_BOMUTF8, 3, &written, NULL);
 			flags = (CP_UTF8 << 16) | SF_USECODEPAGE | SF_TEXT;
 		}
-		RichEdit_StreamOut(pE->hEdit, flags, &eStream);
+		SendMessage(pE->hEdit, EM_STREAMOUT, (WPARAM)flags, (LPARAM)&eStream);
 		CloseHandle(hFile);
 	}
 	else
@@ -3412,7 +3407,7 @@ static void CreateEdit(P_TPEDIT pE){
 
 	hEdit = CreateWindowExW(WS_EX_STATICEDGE, RICHEDIT_CLASSW, NULL, WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_MULTILINE | ES_SELECTIONBAR | ES_NOHIDESEL | ES_SAVESEL | ES_WANTRETURN, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, pE->hChild, NULL, g_hInstance, NULL);
 	if(IsBitOn(g_Settings.res1, SB_AUTO_URL))
-		RichEdit_AutoURLDetect(hEdit, TRUE);
+		SendMessage(hEdit, EM_AUTOURLDETECT, (WPARAM)TRUE, 0);
 
 	if(g_Settings.showLines)
 		staticWidth = g_Settings.marginWidth + L_BOOKMARK;
@@ -4145,7 +4140,7 @@ static VOID CALLBACK RefreshTimerProc(HWND hwnd, UINT uMsg, UINT idEvent, DWORD 
 		SendMessageW(pE->hEdit, EM_EXSETSEL, 0, (LPARAM)&chrg);
 	}
 	else if(g_Settings.preservePosition == POS_END){
-		int		count = RichEdit_GetLineCount(pE->hEdit);
+		int		count = (int)SendMessage(pE->hEdit, EM_GETLINECOUNT, 0, 0L);
 		chrg.cpMin = SendMessageW(pE->hEdit, EM_LINEINDEX, count - 1, 0);
 		chrg.cpMax = chrg.cpMin;
 		SendMessageW(pE->hEdit, EM_EXSETSEL, 0, (LPARAM)&chrg);
@@ -4791,7 +4786,7 @@ static BOOL LoadFile(wchar_t * lpPath, P_TPEDIT pE){
 		eStream.dwCookie = (DWORD)&tpr;
 		eStream.pfnCallback = ReadStreamCallback;
 		eStream.dwError = 0;
-		RichEdit_StreamIn(pE->hEdit, flags, &eStream);
+		SendMessage(pE->hEdit, EM_STREAMIN, (WPARAM)flags, (LPARAM)&eStream);
 		SendMessageW(pE->hEdit, EM_EMPTYUNDOBUFFER, 0, 0);
 		SendMessageW(pE->hEdit, EM_SETMODIFY, FALSE, 0);
 		pE->changed = FALSE;
@@ -5022,7 +5017,7 @@ static void CheckForOuterChanges(void){
 					}
 					else if(g_Settings.preservePosition == POS_END){
 						//jump to the end of document
-						int		count = RichEdit_GetLineCount(pE->hEdit);
+						int		count = (int)SendMessage(pE->hEdit, EM_GETLINECOUNT, 0, 0L);
 						chrg.cpMin = SendMessageW(pE->hEdit, EM_LINEINDEX, count - 1, 0);
 						chrg.cpMax = chrg.cpMin;
 						SendMessageW(pE->hEdit, EM_EXSETSEL, 0, (LPARAM)&chrg);
@@ -5066,7 +5061,7 @@ static void RecheckBookmarks(P_TPEDIT pE){
 	P_TPBMRK		pB;
 	long			count, *pLines, *pTemp, *pAdd;
 	
-	count = RichEdit_GetLineCount(pE->hEdit);
+	count = (int)SendMessage(pE->hEdit, EM_GETLINECOUNT, 0, 0L);
 	pB = pE->bookmarks;
 	pLines = HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, BOOKMARKS_MAX * sizeof(long));
 	pTemp = pAdd = pLines;
@@ -5199,7 +5194,7 @@ static LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 				lppr = (ENPROTECTED *)lParam;
 				pE = GetHandleByChild(hwnd);
 				memcpy(&pE->range, &lppr->chrg, sizeof(CHARRANGE));
-				pE->lines = RichEdit_GetLineCount(lppr->nmhdr.hwndFrom);
+				pE->lines = (int)SendMessage(lppr->nmhdr.hwndFrom, EM_GETLINECOUNT, 0, 0L);
 				if(pE->bookmarks)
 					SetBookmarkInRange(pE);
 				//return FALSE - allow changes to be processed
@@ -5252,7 +5247,7 @@ static LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 					tr.chrg.cpMin = lpel->chrg.cpMin;
 					tr.lpstrText = szBuffer;
 					SendMessageW(pE->hEdit, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
-					if(_wcsistr(szBuffer, L"http:") == szBuffer || _wcsistr(szBuffer, L"ftp:") == szBuffer || _wcsistr(szBuffer, L"https:") == szBuffer || _wcsistr(szBuffer, L"gopher:") == szBuffer || _wcsistr(szBuffer, L"www.") == szBuffer){
+					if(StrStrIW(szBuffer, L"http:") == szBuffer || StrStrIW(szBuffer, L"ftp:") == szBuffer || StrStrIW(szBuffer, L"https:") == szBuffer || StrStrIW(szBuffer, L"gopher:") == szBuffer || StrStrIW(szBuffer, L"www.") == szBuffer){
 						if(wcslen(g_sDefBrowser) == 0)
 							ShellExecuteW(hwnd, L"open", szBuffer, NULL, NULL, SW_SHOWDEFAULT);
 						else{
@@ -5286,7 +5281,7 @@ static void Child_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 	switch(codeNotify){
 	case EN_UPDATE:
 		pE = GetHandleByChild(hwnd);
-		lines = RichEdit_GetLineCount(pE->hEdit);
+		lines = (int)SendMessage(pE->hEdit, EM_GETLINECOUNT, 0, 0L);
 		if(pE->bookmarks){
 			gtx.flags = GTL_NUMCHARS | GTL_PRECISE;
 			gtx.codepage = 1200;
@@ -5586,7 +5581,7 @@ static long GetRealLine(P_TPEDIT pE){
 	gtx.codepage = 1200;
 	charCount = SendMessageW(pE->hEdit, EM_GETTEXTLENGTHEX, (WPARAM)&gtx, 0);
 	//get lines count
-	count = RichEdit_GetLineCount(pE->hEdit);
+	count = (int)SendMessage(pE->hEdit, EM_GETLINECOUNT, 0, 0L);
 	//get formatting rectangle
 	SendMessageW(pE->hEdit, EM_GETRECT, 0, (LPARAM)&rc);
 	//find last visible character and last visible line
@@ -5821,7 +5816,7 @@ static void LoadRecentBookmarks(wchar_t * lpSection, P_TPEDIT pE){
 			p1++;
 		}
 		//store lines count of rich edit
-		pE->lines = RichEdit_GetLineCount(pE->hEdit);
+		pE->lines = (int)SendMessage(pE->hEdit, EM_GETLINECOUNT, 0, 0L);
 		//recheck boockmarks - there may be less lines, than needed (for example, deleted by other program)
 		RecheckBookmarks(pE);
 	}

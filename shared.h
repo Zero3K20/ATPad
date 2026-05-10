@@ -5,27 +5,6 @@
 #include <commctrl.h>
 #include "menu.h"
 
-/*
- * VS2019/Windows SDK compatibility fallbacks:
- * Some SDK header combinations do not provide these RichEdit_* helper macros
- * that older toolchains exposed via windowsx-style headers.
- */
-#ifndef RichEdit_GetLineCount
-#define RichEdit_GetLineCount(hwndCtl) ((int)SendMessage((hwndCtl), EM_GETLINECOUNT, 0, 0L))
-#endif
-
-#ifndef RichEdit_StreamOut
-#define RichEdit_StreamOut(hwndCtl, flags, editstream) ((DWORD)SendMessage((hwndCtl), EM_STREAMOUT, (WPARAM)(flags), (LPARAM)(EDITSTREAM *)(editstream)))
-#endif
-
-#ifndef RichEdit_StreamIn
-#define RichEdit_StreamIn(hwndCtl, flags, editstream) ((DWORD)SendMessage((hwndCtl), EM_STREAMIN, (WPARAM)(flags), (LPARAM)(EDITSTREAM *)(editstream)))
-#endif
-
-#ifndef RichEdit_AutoURLDetect
-#define RichEdit_AutoURLDetect(hwndCtl, bEnable) ((BOOL)SendMessage((hwndCtl), EM_AUTOURLDETECT, (WPARAM)(BOOL)(bEnable), 0))
-#endif
-
 // #include "debug.h"
 void BitOff(int * data, int position);
 void BitOn(int * data, int position);

@@ -16,11 +16,6 @@
 
 #include "registryclean.h"
 
-/* Shlwapi fallback for toolchains that don't provide _stristr. */
-#ifndef _stristr
-#define _stristr StrStrIA
-#endif
-
 /*-@@+@@------------------------------------------------------------------
  Procedure: CleanRegMUICache
  Created  : Thu Aug  9 17:59:15 2007
@@ -46,7 +41,7 @@ void CleanRegMUICache(const char * lpcProgName){
 		result = RegEnumValue(hKey, index, szValue, &cb, NULL, NULL, NULL, NULL);
 		while(result == ERROR_SUCCESS){
 			//if there is our program name in value name - delete this value
-			if(_stristr(szValue, lpcProgName)){
+			if(StrStrIA(szValue, lpcProgName)){
 				RegDeleteValue(hKey, szValue);
 				break;
 			}
@@ -90,7 +85,7 @@ void CleanRegMRU(const char * lpcProgName){
 			index++;
 			//get value's data
 			if(RegQueryValueEx(hKey, szValue, NULL, NULL, szBuffer, &cbValue) == ERROR_SUCCESS){
-				if(_stristr(szBuffer, lpcProgName)){
+				if(StrStrIA(szBuffer, lpcProgName)){
 					//if value's data contains our program name - delete this value
 					RegDeleteValue(hKey, szValue);
 					//return index back
@@ -154,7 +149,7 @@ void CleanRegOpenWithList(const char * lpcProgName){
 							indexOpen++;
 							//get value's data
 							if(RegQueryValueEx(hKeyOpen, szValueOpen, NULL, NULL, szBuffer, &cbO) == ERROR_SUCCESS){
-								if(_stristr(szBuffer, lpcProgName)){
+								if(StrStrIA(szBuffer, lpcProgName)){
 									//if there is our program name in value's data - delete this value
 									RegDeleteValue(hKeyOpen, szValueOpen);
 									//empty buffer
@@ -229,7 +224,7 @@ void CleanRegOpenSaveMRU(const char * lpcProgName){
 					index++;
 					//get value's data
 					if(RegQueryValueEx(hKeyExt, szValue, NULL, NULL, szBuffer, &cbO) == ERROR_SUCCESS){
-						if(_stristr(szBuffer, lpcProgName)){
+						if(StrStrIA(szBuffer, lpcProgName)){
 							//if there is our program name in value's data - delete this value
 							RegDeleteValue(hKeyExt, szValue);
 							//empty buffer
