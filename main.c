@@ -2857,7 +2857,7 @@ static void PrepareMenuRecursive(HMENU hMenu, wchar_t * lpLangFile){
 			}
 			
 			GetMIText(m_pMenus, NELEMS(m_MainMenus), mi.wID, szDefault, ARRAYSIZE(szDefault));
-			SetMenuText(mi.wID, S_MENU, lpLangFile, szDefault, szText);
+			SetMenuText(mi.wID, S_MENU, lpLangFile, szDefault, szText, ARRAYSIZE(szText));
 			if(GetAccString(m_pAcc, m_AccCount, mi.wID, szAcc, ARRAYSIZE(szAcc)) != NULL){
 				SAFE_WCSCAT(szText, szAcc);
 			}

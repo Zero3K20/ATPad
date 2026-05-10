@@ -61,12 +61,12 @@ void ShowPopUp(HWND hwnd, HMENU hMenu){
 	PostMessageW(hwnd, WM_NULL, 0, 0);
 }
 
-void SetMenuText(int id, const wchar_t * lcpSection, const wchar_t * lcpFile, wchar_t * lpDefault, wchar_t * lpBuffer){
+void SetMenuText(int id, const wchar_t * lcpSection, const wchar_t * lcpFile, wchar_t * lpDefault, wchar_t * lpBuffer, size_t cchBuffer){
 
 	wchar_t 		szId[12];
 
 	_itow_s(id, szId, ARRAYSIZE(szId), 10);
-	GetPrivateProfileStringW(lcpSection, szId, lpDefault, lpBuffer, 256, lcpFile);
+	GetPrivateProfileStringW(lcpSection, szId, lpDefault, lpBuffer, (DWORD)cchBuffer, lcpFile);
 }
 
 PMItem GetMItem(PMItem	lpMI, const int size, int id){

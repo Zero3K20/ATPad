@@ -10,7 +10,7 @@ void BitOff(int * data, int position);
 void BitOn(int * data, int position);
 BOOL IsBitOn(int data, int position);
 void ShowPopUp(HWND hwnd, HMENU hMenu);
-void SetMenuText(int id, const wchar_t * lcpSection, const wchar_t * lcpFile, wchar_t * lpDefault, wchar_t * lpBuffer);
+void SetMenuText(int id, const wchar_t * lcpSection, const wchar_t * lcpFile, wchar_t * lpDefault, wchar_t * lpBuffer, size_t cchBuffer);
 void SetMIText(MItem * lpMI, const int size, int id, const wchar_t * lpText);
 void GetMIText(MItem * lpMI, const int size, int id, wchar_t * lpText, size_t cchText);
 void GetTooltip(wchar_t * lpTip, size_t cchTip, PMItem pItems, int size, UINT id);
