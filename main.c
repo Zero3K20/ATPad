@@ -4159,7 +4159,17 @@ static void CheckViewItems(void){
 	
 	ZeroMemory(&tci, sizeof(tci));
 	tci.mask = TCIF_PARAM;
+	if(!IsWindow(g_hSplit)){
+		CheckMenuItem(g_hMenu, IDM_F_R_FILES, MF_BYCOMMAND | MF_UNCHECKED);
+		CheckMenuItem(g_hMenu, IDM_SNIPPETS, MF_BYCOMMAND | MF_UNCHECKED);
+		return;
+	}
 	hTab = (HWND)SendMessageW(g_hSplit, TBNPM_GET_ASS_TAB, 0, 0);
+	if(!IsWindow(hTab)){
+		CheckMenuItem(g_hMenu, IDM_F_R_FILES, MF_BYCOMMAND | MF_UNCHECKED);
+		CheckMenuItem(g_hMenu, IDM_SNIPPETS, MF_BYCOMMAND | MF_UNCHECKED);
+		return;
+	}
 	count = TabCtrl_GetItemCount(hTab);
 	for(int i = 0; i < count; i++){
 		SendMessageW(hTab, TCM_GETITEMW, i, (LPARAM)&tci);
