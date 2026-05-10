@@ -35,7 +35,7 @@
 
 DWORD WINAPI CheckForUpdateFunc(LPVOID lpParam){
 	HINTERNET 		hINet, hConnection, hData;
-	char 			szBuffer[12], szAddress[512], szFile[256], szVersion[12], szErrBuffer[4096];
+	char 			szBuffer[UPDM_VERSION_SIZE], szAddress[UPDM_ADDRESS_SIZE], szFile[UPDM_FILE_SIZE], szVersion[UPDM_VERSION_SIZE], szErrBuffer[4096];
 	DWORD 			dwRead, dwErr, dwSize = 4096;
 	HWND			hwnd;
 
@@ -66,7 +66,7 @@ DWORD WINAPI CheckForUpdateFunc(LPVOID lpParam){
 		return 1;
 	}
 	HttpSendRequest(hData, NULL, 0, NULL, 0);
-	if(InternetReadFile(hData, szBuffer, 12, &dwRead)){
+	if(InternetReadFile(hData, szBuffer, UPDM_VERSION_SIZE - 1, &dwRead)){
 		if(dwRead > 0){
 			char	*p1, *p2;
 			szBuffer[dwRead] = 0;

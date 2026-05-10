@@ -36,7 +36,9 @@
 #include <objbase.h>
 #include <Iphlpapi.h>
 #include <stdio.h>
+#include <limits.h>
 #include <wctype.h>
+#include <strsafe.h>
 
 #include "main.h"
 #include "toolbar.h"
@@ -61,6 +63,9 @@
 
 #define NELEMS(a)  (sizeof(a) / sizeof((a)[0]))
 #define INRANGE(a, b, c)	((a >= b && a <= c) ? ((c > b) ? (0) : (2)) : ((a < b) ? -1 : 1))
+#define SAFE_WCSCPY(d, s) StringCchCopyW((d), ARRAYSIZE(d), (s))
+#define SAFE_WCSCAT(d, s) StringCchCatW((d), ARRAYSIZE(d), (s))
+#define MENU_TEXT_CCH 128
 
 /** Prototypes **************************************************************/
 
@@ -114,9 +119,9 @@ static void AddWindowMenu(HMENU hMenu, int index, wchar_t * lpText, BOOL fCheck)
 static void ClearWindowMenu(void);
 static void RecreateWindowMenu(void);
 static void CheckWindowMenu(HMENU hMenu, int id);
-static BOOL OSFileDialog(wchar_t * lpCaption, wchar_t * lpNameFull, wchar_t * lpNameShort, BOOL fOpen, BOOL fUntitled);
-static void GetShortName(int index, wchar_t * lpName, BOOL fWithStar);
-static void GetLongName(int index, wchar_t * lpName);
+static BOOL OSFileDialog(wchar_t * lpCaption, wchar_t * lpNameFull, size_t cchNameFull, wchar_t * lpNameShort, size_t cchNameShort, BOOL fOpen, BOOL fUntitled);
+static void GetShortName(int index, wchar_t * lpName, size_t cchName, BOOL fWithStar);
+static void GetLongName(int index, wchar_t * lpName, size_t cchName);
 static void CloseTab(P_TPEDIT pE);
 static DWORD CALLBACK ReadStreamCallback(DWORD dwCookie, LPBYTE pbBuff, LONG cb, LONG FAR *pcb);
 static DWORD CALLBACK WriteStreamCallback(DWORD dwCookie, LPBYTE pbBuff, LONG cb, LONG FAR *pcb);
@@ -124,7 +129,7 @@ static BOOL LoadFile(wchar_t * lpPath, P_TPEDIT pE);
 static LRESULT CALLBACK OFNParentProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static UINT_PTR CALLBACK OFNHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam);
 static BOOL SaveFile(wchar_t * lpLongName, P_TPEDIT pE);
-static void GetFileNameFromPath(wchar_t * lpPath, wchar_t * lpName);
+static void GetFileNameFromPath(wchar_t * lpPath, wchar_t * lpName, size_t cchName);
 static void SaveAll(void);
 static BOOL SaveAllOnExit(BOOL fCloseTab);
 static void PrintCurrentPosition(int x, int y);
@@ -138,7 +143,7 @@ static void StoreBookmarks(wchar_t * lpSection, P_TPEDIT pE);
 static void LoadRecentFiles(void);
 static void AddToRecentFiles(P_TPEDIT pE, BOOL fAddToMenu);
 static BOOL IsRecentInList(wchar_t * lpPath);
-static void GetRecentPath(int id, wchar_t * lpPath);
+static void GetRecentPath(int id, wchar_t * lpPath, size_t cchPath);
 static int ShiftRecentFilesUp(void);
 static P_TPEDIT LoadDocument(HWND hMain, wchar_t * lpNameFull, wchar_t * lpNameShort, P_TPEDIT pE, BOOL fAddTab);
 static void CheckForOuterChanges(void);
@@ -154,7 +159,7 @@ static void LoadLastSession(HWND hMain);
 static void RemoveFromLastSession(wchar_t * lpPath);
 static void AddToLastSession(wchar_t * lpPath, P_TPEDIT pE);
 static void RecreateLastSession(void);
-static void GetTempSaveName(wchar_t * lpLongName, wchar_t * lpTempSave, BOOL fGetExtension);
+static void GetTempSaveName(wchar_t * lpLongName, wchar_t * lpTempSave, size_t cchTempSave, BOOL fGetExtension);
 static HICON GetSmallIcon(int index);
 static void GetAppSmallIcon(void);
 static void SetSmallIcon(P_TPEDIT pE, wchar_t * lpPath);
@@ -206,7 +211,7 @@ static HMENU ClearRefreshMenu(void);
 static void BuildRefreshMenu(HMENU hMenu);
 static void AddBookmarksToRecentLast(wchar_t * lpSection, wchar_t * lpKeyFixed, wchar_t * lpKeyRemovable, wchar_t * lpValue, wchar_t * lpPath);
 static void AddValueToRecentLast(wchar_t * lpSection, wchar_t * lpKey, wchar_t * lpValueFixed, wchar_t * lpValueRemovable, wchar_t * lpPath);
-static void ConstructINIKey(wchar_t * lpPath, wchar_t * lpLongName);
+static void ConstructINIKey(wchar_t * lpPath, size_t cchPath, wchar_t * lpLongName);
 static void GetLanguageID(void);
 static BOOL IsAccPrepared(void);
 static void CopyDefAccelerators(void);
@@ -355,27 +360,27 @@ static TBBUTTON		 	m_TBBtnArray[] = {{0,0,TBSTATE_ENABLED,TBSTYLE_SEP,0,0,0,0},
 						{0,0,TBSTATE_ENABLED,TBSTYLE_SEP,0,0,0,0},
 						{8,IDM_HELP,TBSTATE_ENABLED,TBSTYLE_BUTTON,0,0,0,0}
 						};
-static ACCEL			m_AccDef[] = {{FCONTROL | FVIRTKEY,VK_S,IDM_SAVE},
-						{FCONTROL | FVIRTKEY,VK_N,IDM_NEW},
-						{FCONTROL | FVIRTKEY,VK_O,IDM_OPEN},
-						{FCONTROL | FVIRTKEY,VK_P,IDM_PRINT},
+static ACCEL			m_AccDef[] = {{FCONTROL | FVIRTKEY,'S',IDM_SAVE},
+						{FCONTROL | FVIRTKEY,'N',IDM_NEW},
+						{FCONTROL | FVIRTKEY,'O',IDM_OPEN},
+						{FCONTROL | FVIRTKEY,'P',IDM_PRINT},
 						{FALT | FVIRTKEY,VK_F4,IDM_EXIT},
-						{FCONTROL | FVIRTKEY,VK_Z,IDM_UNDO},
-						{FCONTROL | FVIRTKEY,VK_Y,IDM_REDO},
-						{FCONTROL | FVIRTKEY,VK_X,IDM_CUT},
-						{FCONTROL | FVIRTKEY,VK_C,IDM_COPY},
-						{FCONTROL | FVIRTKEY,VK_V,IDM_PASTE},
-						{FCONTROL | FVIRTKEY,VK_A,IDM_SELECT_ALL},
-						{FCONTROL | FVIRTKEY,VK_F,IDM_FIND},
-						{FCONTROL | FVIRTKEY,VK_H,IDM_REPLACE},
+						{FCONTROL | FVIRTKEY,'Z',IDM_UNDO},
+						{FCONTROL | FVIRTKEY,'Y',IDM_REDO},
+						{FCONTROL | FVIRTKEY,'X',IDM_CUT},
+						{FCONTROL | FVIRTKEY,'C',IDM_COPY},
+						{FCONTROL | FVIRTKEY,'V',IDM_PASTE},
+						{FCONTROL | FVIRTKEY,'A',IDM_SELECT_ALL},
+						{FCONTROL | FVIRTKEY,'F',IDM_FIND},
+						{FCONTROL | FVIRTKEY,'H',IDM_REPLACE},
 						{FVIRTKEY,VK_F3,IDM_FIND_NEXT},
-						{FCONTROL | FVIRTKEY,VK_G,IDM_GOTO},
-						{FCONTROL | FSHIFT | FVIRTKEY,VK_A,IDM_SAVE_AS},
-						{FCONTROL | FSHIFT | FVIRTKEY,VK_S,IDM_SAVE_ALL},
+						{FCONTROL | FVIRTKEY,'G',IDM_GOTO},
+						{FCONTROL | FSHIFT | FVIRTKEY,'A',IDM_SAVE_AS},
+						{FCONTROL | FSHIFT | FVIRTKEY,'S',IDM_SAVE_ALL},
 						{FSHIFT | FVIRTKEY,VK_F4,IDM_BM_TOGGLE},
 						{FVIRTKEY,VK_F4,IDM_BM_NEXT},
-						{FCONTROL | FSHIFT | FVIRTKEY,VK_U,IDM_TO_UPPER},
-						{FCONTROL | FSHIFT | FVIRTKEY,VK_L,IDM_TO_LOWER},
+						{FCONTROL | FSHIFT | FVIRTKEY,'U',IDM_TO_UPPER},
+						{FCONTROL | FSHIFT | FVIRTKEY,'L',IDM_TO_LOWER},
 						{FVIRTKEY,VK_F5,IDM_REFRESH}
 						};
 static wchar_t			*m_RefDef[] = {L"Turn off", L"15 sec", L"30 sec", L"1 min", L"3 min", L"5 min", L"10 min", L"15 min", L"20 min", L"30 min"};
@@ -400,12 +405,12 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 	*g_Paths.sINI = '\0';
 	if((args & ARG_INI_PATH) == ARG_INI_PATH){
 		//INI file path has been set via command line
-		wcscpy(g_Paths.sINI, szINIPath);
-		if(!_wcsistr(g_Paths.sINI, INI_FILE)){
+		SAFE_WCSCPY(g_Paths.sINI, szINIPath);
+		if(!StrStrIW(g_Paths.sINI, INI_FILE)){
 			if(IsLastBackslash(g_Paths.sINI))
-				wcscat(g_Paths.sINI, INI_FILE);
+				SAFE_WCSCAT(g_Paths.sINI, INI_FILE);
 			else
-				wcscat(g_Paths.sINI, INI_FILE_SUBPATH);
+				SAFE_WCSCAT(g_Paths.sINI, INI_FILE_SUBPATH);
 		}
 	}
 	else{
@@ -462,7 +467,7 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 
 	if((args & ARG_PROG_PATH) == ARG_PROG_PATH){
 		//full program path has been sent via command line (may be 3-d party launcher) - needed for shortcuts creation
-		wcscpy(g_Paths.sProgFullPath, szProgPath);
+		SAFE_WCSCPY(g_Paths.sProgFullPath, szProgPath);
 	}
 	else{
 		//get real full program path
@@ -570,9 +575,9 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 		//load document if needed
 		wchar_t		szPathShort[MAX_PATH];
 		P_TPEDIT 	pE = GetActiveHandle();
-		GetFileNameFromPath(szLoadPath, szPathShort);
-		wcscpy(pE->szLongName, szLoadPath);
-		wcscpy(pE->szShortName, szPathShort);
+		GetFileNameFromPath(szLoadPath, szPathShort, ARRAYSIZE(szPathShort));
+		SAFE_WCSCPY(pE->szLongName, szLoadPath);
+		SAFE_WCSCPY(pE->szShortName, szPathShort);
 		LoadDocument(g_hMain, szLoadPath, szPathShort, pE, FALSE);
 		RedrawWindow(m_hTabMain, NULL, NULL, RDW_INVALIDATE);
 		GetAppSmallIcon();
@@ -625,7 +630,7 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 	HANDLE_MSG (hwnd, WM_DRAWITEM, Main_OnDrawItem);
 	HANDLE_MSG (hwnd, WM_MEASUREITEM, Main_OnMeasureItem);
 	HANDLE_MSG (hwnd, WM_ACTIVATE, Main_OnActivate);
-	HANDLE_MSG (hwnd, WM_DROPFILES, Main_OnDropFiles);
+	case WM_DROPFILES: Main_OnDropFiles(hwnd, (HDROP)wParam); return 0L;
 	HANDLE_MSG (hwnd, WM_SYSCOLORCHANGE, Main_OnSysColorChange);
 	HANDLE_MSG (hwnd, WM_MOVE, Main_OnMove);
 	HANDLE_MSG (hwnd, WM_INITMENUPOPUP, Main_OnInitMenuPopup);
@@ -646,19 +651,19 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 			MessageBoxW(hwnd, g_Strings.sSameVersion, g_Strings.sCheckUpdate, MB_OK | MB_ICONINFORMATION);
 		return TRUE;
 	case UPDM_GETVERSION:
-		strcpy((char *)wParam, m_Version);
+		StringCchCopyA((char *)wParam, UPDM_VERSION_SIZE, m_Version);
 		return TRUE;
 	case UPDM_GETSTRINGS:
-		strcpy((char *)wParam, UPDATE_CHECK_URL);
-		strcpy((char *)lParam, "/version.txt");
+		StringCchCopyA((char *)wParam, UPDM_ADDRESS_SIZE, UPDATE_CHECK_URL);
+		StringCchCopyA((char *)lParam, UPDM_FILE_SIZE, "/version.txt");
 		return TRUE;
 	case TBNPM_GET_MENU_TXT:
-		GetMIText(m_MainMenus, NELEMS(m_MainMenus), wParam, (wchar_t *)lParam);
+		GetMIText(m_MainMenus, NELEMS(m_MainMenus), wParam, (wchar_t *)lParam, MENU_TEXT_CCH);
 		return TRUE;
 	case TBNPM_GET_ACC:{
 		ACCEL				*pAcc;
 		P_TP_TEMPACCEL		pTmp = (P_TP_TEMPACCEL)lParam;
-		pAcc = GetAccString(m_pAcc, m_AccCount, pTmp->acc.cmd, pTmp->text);
+		pAcc = GetAccString(m_pAcc, m_AccCount, pTmp->acc.cmd, pTmp->text, ARRAYSIZE(pTmp->text));
 		if(pAcc){
 			pTmp->acc.fVirt = pAcc->fVirt;
 			pTmp->acc.key = pAcc->key;
@@ -706,7 +711,7 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 		//file path was saved as global atom
 		GlobalGetAtomNameW((ATOM)lParam, szLoadPath, MAX_PATH);
 		DeleteAtom((ATOM)lParam);
-		GetFileNameFromPath(szLoadPath, szPathShort);
+		GetFileNameFromPath(szLoadPath, szPathShort, ARRAYSIZE(szPathShort));
 		LoadDocument(hwnd, szLoadPath, szPathShort, NULL, TRUE);
 		RedrawWindow(m_hTabMain, NULL, NULL, RDW_INVALIDATE);
 		return TRUE;
@@ -840,9 +845,9 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 				wchar_t			szTooltip[128];
 				TOOLTIPTEXTW 	* ttp;
 				
-				GetTooltip(szTooltip, m_MainMenus, NELEMS(m_MainMenus), lpnm->idFrom);
+				GetTooltip(szTooltip, ARRAYSIZE(szTooltip), m_MainMenus, NELEMS(m_MainMenus), lpnm->idFrom);
 				ttp = (TOOLTIPTEXTW *)lParam;
-				wcscpy(ttp->szText, szTooltip);
+				SAFE_WCSCPY(ttp->szText, szTooltip);
 			}
 			else if(lpnm->hwndFrom == m_hTTTab){
 				LPNMTTDISPINFOW	lpnmtdi = (LPNMTTDISPINFOW) lParam;
@@ -856,7 +861,7 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 				index = TabCtrl_HitTest(m_hTabMain, &tch);
 				if(index >= 0){
 					lpnmtdi->lpszText = szBuffer;
-					GetLongName(index, szBuffer);
+					GetLongName(index, szBuffer, ARRAYSIZE(szBuffer));
 				}
 			}
 			return TRUE;
@@ -933,8 +938,8 @@ static void Main_OnDropFiles(HWND hwnd, HDROP hdrop)
 		DragQueryFileW(hdrop, i, szNameFull, MAX_PATH);
 		//check whether really file is dropped (not directory etc)
 		if(IsFileDropped(szNameFull)){
-			wcscpy(szNameShort, szNameFull);
-			GetFileNameFromPath(szNameFull, szNameShort);
+			SAFE_WCSCPY(szNameShort, szNameFull);
+			GetFileNameFromPath(szNameFull, szNameShort, ARRAYSIZE(szNameShort));
 			if(g_Settings.openNew){
 				//load file in new tab
 				LoadDocument(hwnd, szNameFull, szNameShort, NULL, TRUE);
@@ -1350,33 +1355,33 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 				//if document is file
 				if(!pE->changed){
 					//if no changes have been made
-					SendAsAttachment(hwnd, pE->szLongName, EMAIL_SUBJECT, szTemp);
+					SendAsAttachment(hwnd, pE->szLongName, EMAIL_SUBJECT, szTemp, ARRAYSIZE(szTemp));
 					if(wcslen(szTemp) > 0){
 						DeleteFileW(szTemp);
 					}
 				}
 				else{
 					//changes have been made to file - prompt to save
-					wcscpy(szMessage, g_Strings.sSaveChanges);
-					wcscat(szMessage, L" ");
-					wcscat(szMessage, pE->szLongName);
-					wcscat(szMessage, L"?");
+					SAFE_WCSCPY(szMessage, g_Strings.sSaveChanges);
+					SAFE_WCSCAT(szMessage, L" ");
+					SAFE_WCSCAT(szMessage, pE->szLongName);
+					SAFE_WCSCAT(szMessage, L"?");
 					int result = MessageBoxW(g_hMain, szMessage, PROGRAM_NAME, MB_YESNOCANCEL | MB_ICONEXCLAMATION);
 					switch(result){
 					case IDYES:
 						//save file and send
 						SendMessageW(hwnd, WM_COMMAND, MAKEWPARAM(IDM_SAVE, 0), 0);
-						SendAsAttachment(hwnd, pE->szLongName, EMAIL_SUBJECT, szTemp);
+						SendAsAttachment(hwnd, pE->szLongName, EMAIL_SUBJECT, szTemp, ARRAYSIZE(szTemp));
 						if(wcslen(szTemp) > 0){
 							DeleteFileW(szTemp);
 						}
 						break;
 					case IDNO:
 						//save file under temporary name, send and delete temporary file
-						GetTempSaveName(pE->szLongName, szSaveTemp, TRUE);
+						GetTempSaveName(pE->szLongName, szSaveTemp, ARRAYSIZE(szSaveTemp), TRUE);
 						m_CurrType = pE->type;
 						SaveFile(szSaveTemp, pE);
-						SendAsAttachment(hwnd, szSaveTemp, EMAIL_SUBJECT, szTemp);
+						SendAsAttachment(hwnd, szSaveTemp, EMAIL_SUBJECT, szTemp, ARRAYSIZE(szTemp));
 						if(wcslen(szTemp) > 0){
 							DeleteFileW(szTemp);
 						}
@@ -1391,16 +1396,16 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 				//document is 'Untitled'
 				if(pE->changed){
 					//if changes have been made - prompt to save
-					wcscpy(szMessage, g_Strings.sSaveChanges);
-					wcscat(szMessage, L" ");
-					wcscat(szMessage, pE->szLongName);
-					wcscat(szMessage, L"?");
+					SAFE_WCSCPY(szMessage, g_Strings.sSaveChanges);
+					SAFE_WCSCAT(szMessage, L" ");
+					SAFE_WCSCAT(szMessage, pE->szLongName);
+					SAFE_WCSCAT(szMessage, L"?");
 					int result = MessageBoxW(g_hMain, szMessage, PROGRAM_NAME, MB_YESNO | MB_ICONEXCLAMATION);
 					switch(result){
 					case IDYES:{
 						//save and send
 						SendMessageW(hwnd, WM_COMMAND, MAKEWPARAM(IDM_SAVE, 0), 0);
-						SendAsAttachment(hwnd, pE->szLongName, EMAIL_SUBJECT, szTemp);
+						SendAsAttachment(hwnd, pE->szLongName, EMAIL_SUBJECT, szTemp, ARRAYSIZE(szTemp));
 						if(wcslen(szTemp) > 0){
 							DeleteFileW(szTemp);
 						}
@@ -1408,10 +1413,10 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 					}
 					case IDNO:
 						//save file under temporary name, send and delete temporary file
-						GetTempSaveName(pE->szLongName, szSaveTemp, FALSE);
+						GetTempSaveName(pE->szLongName, szSaveTemp, ARRAYSIZE(szSaveTemp), FALSE);
 						m_CurrType = pE->type;
 						SaveFile(szSaveTemp, pE);
-						SendAsAttachment(hwnd, szSaveTemp, EMAIL_SUBJECT, szTemp);
+						SendAsAttachment(hwnd, szSaveTemp, EMAIL_SUBJECT, szTemp, ARRAYSIZE(szTemp));
 						if(wcslen(szTemp) > 0){
 							DeleteFileW(szTemp);
 						}
@@ -1451,9 +1456,9 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		FindOnClick();
 		// //find next text occurence in document
 		// if(SearchText() == -1){
-			// wcscpy(szMessage, g_Strings.sNoOccurrences);
-			// wcscat(szMessage, L"\n");
-			// wcscat(szMessage, g_SearchString);
+			// SAFE_WCSCPY(szMessage, g_Strings.sNoOccurrences);
+			// SAFE_WCSCAT(szMessage, L"\n");
+			// SAFE_WCSCAT(szMessage, g_SearchString);
 			// MessageBoxW(hwnd, szMessage, PROGRAM_NAME, MB_OK | MB_ICONEXCLAMATION);
 		// }
 		break;
@@ -1480,7 +1485,7 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		//reload current document
 		CHARRANGE		chrg;
 		BOOL			prevCheck, isBookmark = FALSE;
-		P_TPBMRK		pTemp;
+		P_TPBMRK		pTemp = NULL;
 
 		//store checking flag and prevent checking during reloading
 		prevCheck = m_CheckOuter;
@@ -1498,10 +1503,10 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		}
 		if(pE->changed){
 			//if changes have been made - warning about possible data losss
-			wcscpy(szMessage, g_Strings.sDiscardChanges);
-			wcscat(szMessage, L" ");
-			wcscat(szMessage, pE->szShortName);
-			wcscat(szMessage, L"?");
+			SAFE_WCSCPY(szMessage, g_Strings.sDiscardChanges);
+			SAFE_WCSCAT(szMessage, L" ");
+			SAFE_WCSCAT(szMessage, pE->szShortName);
+			SAFE_WCSCAT(szMessage, L"?");
 			if(MessageBoxW(hwnd, szMessage, PROGRAM_NAME, MB_YESNO | MB_ICONQUESTION) == IDYES)
 				LoadDocument(hwnd, pE->szLongName, pE->szShortName, pE, FALSE);
 		}
@@ -1514,7 +1519,7 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		}
 		else if(g_Settings.preservePosition == POS_END){
 			//jump to the end of document
-			int		count = RichEdit_GetLineCount(pE->hEdit);
+			int		count = (int)SendMessage(pE->hEdit, EM_GETLINECOUNT, 0, 0L);
 			chrg.cpMin = SendMessageW(pE->hEdit, EM_LINEINDEX, count - 1, 0);
 			chrg.cpMax = chrg.cpMin;
 			SendMessageW(pE->hEdit, EM_EXSETSEL, 0, (LPARAM)&chrg);
@@ -1531,7 +1536,7 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 	}
 	case IDM_OPEN:
 		//open document
-		if(OSFileDialog(g_Strings.sOpenFileCaption, szNameFull, szNameShort, TRUE, TRUE)){
+		if(OSFileDialog(g_Strings.sOpenFileCaption, szNameFull, ARRAYSIZE(szNameFull), szNameShort, ARRAYSIZE(szNameShort), TRUE, TRUE)){
 			if(g_Settings.openNew){
 				//open in new tab
 				LoadDocument(hwnd, szNameFull, szNameShort, NULL, TRUE);
@@ -1550,16 +1555,16 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		//'Save As...'
 		P_TPEDIT		pE = GetActiveHandle();
 		HMENU			hMenu = GetSubMenu(g_hMenu, GetMenuPosition(g_hMenu, IDM_WINDOW));
-		wcscpy(szNameFull, pE->szLongName);
-		if(OSFileDialog(g_Strings.sSaveFileCaption, szNameFull, szNameShort, FALSE, pE->status == ST_NEW ? TRUE : FALSE)){
+		SAFE_WCSCPY(szNameFull, pE->szLongName);
+		if(OSFileDialog(g_Strings.sSaveFileCaption, szNameFull, ARRAYSIZE(szNameFull), szNameShort, ARRAYSIZE(szNameShort), FALSE, pE->status == ST_NEW ? TRUE : FALSE)){
 			//save document
 			if(SaveFile(szNameFull, pE)){
 				SendMessageW(pE->hEdit, EM_SETMODIFY, FALSE, 0);
 				pE->changed = FALSE;
 				pE->status = ST_FILE;
 				pE->type = m_CurrType;
-				wcscpy(pE->szLongName, szNameFull);
-				wcscpy(pE->szShortName, szNameShort);
+				SAFE_WCSCPY(pE->szLongName, szNameFull);
+				SAFE_WCSCPY(pE->szShortName, szNameShort);
 				ZeroMemory(&fd, sizeof(fd));
 				hFile = FindFirstFileW(szNameFull, &fd);
 				if(hFile != INVALID_HANDLE_VALUE){
@@ -1727,11 +1732,11 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		else if(id > RECENT_MENU_MIN && id <= RECENT_MENU_MIN + RECENT_FILES_MAX){	
 			//menu item from 'Recent files' has been selected
 			//get file path
-			GetRecentPath(id, szNameFull);
+			GetRecentPath(id, szNameFull, ARRAYSIZE(szNameFull));
 			ZeroMemory(&fd, sizeof(fd));
 			if(GetFileAttributesW(szNameFull) != 0xffffffff){
 				//if file exists
-				GetFileNameFromPath(szNameFull, szNameShort);
+				GetFileNameFromPath(szNameFull, szNameShort, ARRAYSIZE(szNameShort));
 				//load document
 				pE = LoadDocument(hwnd, szNameFull, szNameShort, NULL, TRUE);
 				//load possible bookmarks
@@ -1746,9 +1751,9 @@ static void Main_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 			}
 			else{
 				//file does not exists
-				wcscpy(szMessage, szNameFull);
-				wcscat(szMessage, L"\n");
-				wcscat(szMessage, g_Strings.sFileNotExist);
+				SAFE_WCSCPY(szMessage, szNameFull);
+				SAFE_WCSCAT(szMessage, L"\n");
+				SAFE_WCSCAT(szMessage, g_Strings.sFileNotExist);
 				MessageBoxW(hwnd, szMessage, PROGRAM_NAME, MB_OK | MB_ICONEXCLAMATION);
 			}
 		}
@@ -1849,10 +1854,10 @@ static BOOL SaveAllOnExit(BOOL fCloseTab){
 				TabCtrl_SetCurSel(m_hTabMain, i);
 				SendMessageW(g_hMain, WM_NOTIFY, 0, (LPARAM)&nmhdr);
 				//prompt to save changes
-				wcscpy(szMessage, g_Strings.sSaveChanges);
-				wcscat(szMessage, L" ");
-				wcscat(szMessage, pE->szLongName);
-				wcscat(szMessage, L"?");
+				SAFE_WCSCPY(szMessage, g_Strings.sSaveChanges);
+				SAFE_WCSCAT(szMessage, L" ");
+				SAFE_WCSCAT(szMessage, pE->szLongName);
+				SAFE_WCSCAT(szMessage, L"?");
 				result = MessageBoxW(g_hMain, szMessage, PROGRAM_NAME, MB_YESNOCANCEL | MB_ICONEXCLAMATION);
 				switch(result){
 				case IDYES:
@@ -1948,7 +1953,7 @@ static BOOL SaveFile(wchar_t * lpLongName, P_TPEDIT pE){
 			WriteFile(hFile, m_BOMUTF8, 3, &written, NULL);
 			flags = (CP_UTF8 << 16) | SF_USECODEPAGE | SF_TEXT;
 		}
-		RichEdit_StreamOut(pE->hEdit, flags, &eStream);
+		SendMessage(pE->hEdit, EM_STREAMOUT, (WPARAM)flags, (LPARAM)&eStream);
 		CloseHandle(hFile);
 	}
 	else
@@ -2024,10 +2029,20 @@ static LRESULT CALLBACK EditProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 }
 
 static int WinVer(void){
+	typedef LONG (WINAPI * PFN_RTLGETVERSION)(OSVERSIONINFOW *);
 	OSVERSIONINFOW	osv;
+	HMODULE			hNtdll;
+	PFN_RTLGETVERSION	pRtlGetVersion;
 
+	ZeroMemory(&osv, sizeof(osv));
 	osv.dwOSVersionInfoSize = sizeof(osv);
-	GetVersionExW(&osv);
+	hNtdll = GetModuleHandleW(L"ntdll.dll");
+	pRtlGetVersion = hNtdll ? (PFN_RTLGETVERSION)GetProcAddress(hNtdll, "RtlGetVersion") : NULL;
+	if(!pRtlGetVersion || pRtlGetVersion(&osv) != 0){
+		//fallback to Vista + behavior if version cannot be queried
+		//(same result this function returns for all supported NT 5.1+ targets)
+		return 6;
+	}
 	if(osv.dwMajorVersion > 5 ){
 		return 6;
 	}
@@ -2100,7 +2115,7 @@ static BOOL IsDLLVersionForStyle(void){
 static void GetSubPath(wchar_t * lpResult, const wchar_t * lpFile){
 	GetModuleFileNameW(NULL, lpResult, MAX_PATH);
 	PathRemoveFileSpecW(lpResult);
-	wcscat(lpResult, lpFile);
+	StringCchCatW(lpResult, MAX_PATH, lpFile);
 }
 
 static int ParseTPCommandLine(wchar_t * pINIPath, wchar_t * pDataPath, wchar_t * pProgPath, wchar_t * pLoadPath){
@@ -2120,21 +2135,21 @@ static int ParseTPCommandLine(wchar_t * pINIPath, wchar_t * pDataPath, wchar_t *
 				if((_wcsicmp(szArglist[i], L"-conf") == 0) || (_wcsicmp(szArglist[i], L"-config") == 0)){
 					if(nArgs >= 3){
 						if(wcslen(szArglist[i + 1]) > 0){
-							wcscpy(pINIPath, szArglist[i + 1]);
+							StringCchCopyW(pINIPath, MAX_PATH, szArglist[i + 1]);
 							PathUnquoteSpacesW(pINIPath);
 							result |= ARG_INI_PATH;
 						}
 					}
 					if(nArgs >= 4){
 						if(wcslen(szArglist[i + 2]) > 0){
-							wcscpy(pDataPath, szArglist[i + 2]);
+							StringCchCopyW(pDataPath, MAX_PATH, szArglist[i + 2]);
 							PathUnquoteSpacesW(pDataPath);
 							result |= ARG_DATA_PATH;
 						}
 					}
 					if(nArgs == 5){
 						if(wcslen(szArglist[i + 3]) > 0){
-							wcscpy(pProgPath, szArglist[i + 3]);
+							StringCchCopyW(pProgPath, MAX_PATH, szArglist[i + 3]);
 							PathUnquoteSpacesW(pProgPath);
 							result |= ARG_PROG_PATH;
 						}
@@ -2160,13 +2175,13 @@ static int ParseTPCommandLine(wchar_t * pINIPath, wchar_t * pDataPath, wchar_t *
 				else{
 					result = ARG_LOAD_ON_START;
 					if(nArgs == 1){
-						wcscpy(pLoadPath, szArglist[1]);
+						StringCchCopyW(pLoadPath, MAX_PATH, szArglist[1]);
 					}
 					else{
 						for(int i = 1; i < nArgs; i++){
-							wcscat(pLoadPath, szArglist[i]);
+							StringCchCatW(pLoadPath, MAX_PATH, szArglist[i]);
 							if(i < nArgs - 1){
-								wcscat(pLoadPath, L" ");
+								StringCchCatW(pLoadPath, MAX_PATH, L" ");
 							}
 						}
 					}
@@ -2198,12 +2213,12 @@ static void AddToLastSession(wchar_t * lpPath, P_TPEDIT pE){
 	wchar_t				szPattern[MAX_PATH * 2], szPRemovable[MAX_PATH * 2];
 	int					index = 0;
 
-	wcscpy(szPattern, m_MACAddress);
-	wcscat(szPattern, DELIMETER);
-	wcscat(szPattern, lpPath);
-	wcscpy(szPRemovable, REMOVABLE_MAC);
-	wcscat(szPRemovable, DELIMETER);
-	wcscat(szPRemovable, lpPath);
+	SAFE_WCSCPY(szPattern, m_MACAddress);
+	SAFE_WCSCAT(szPattern, DELIMETER);
+	SAFE_WCSCAT(szPattern, lpPath);
+	SAFE_WCSCPY(szPRemovable, REMOVABLE_MAC);
+	SAFE_WCSCAT(szPRemovable, DELIMETER);
+	SAFE_WCSCAT(szPRemovable, lpPath);
 	GetPrivateProfileStringW(S_LASTSESSION, NULL, NULL, szKeys, 512, g_Paths.sINI);
 	pw = szKeys;
 	if(*pw){
@@ -2226,7 +2241,7 @@ static void AddToLastSession(wchar_t * lpPath, P_TPEDIT pE){
 	qsort(m_LastOtherIndices, m_LastOtherFiles, sizeof(int), Compare);
 	while(InOtherLastIndices(index))
 		index++;
-	_itow(index, szKey, 10); 
+	_itow_s(index, szKey, ARRAYSIZE(szKey), 10); 
 	AddValueToRecentLast(S_LASTSESSION, szKey, szPattern, szPRemovable, lpPath);
 	//store bookmarks
 	StoreBookmarks(S_LASTS_BOOKMARKS, pE);
@@ -2238,13 +2253,13 @@ static void RemoveFromLastSession(wchar_t * lpPath){
 	GetPrivateProfileStringW(S_LASTSESSION, NULL, NULL, szKeys, 512, g_Paths.sINI);
 	pw = szKeys;
 	if(*pw){
-		ConstructINIKey(szPattern, lpPath);
-		// wcscpy(szPattern, m_MACAddress);
-		// wcscat(szPattern, DELIMETER);
-		// wcscat(szPattern, lpPath);
-		// wcscpy(szPRemovable, REMOVABLE_MAC);
-		// wcscat(szPRemovable, DELIMETER);
-		// wcscat(szPRemovable, lpPath);
+		ConstructINIKey(szPattern, ARRAYSIZE(szPattern), lpPath);
+		// SAFE_WCSCPY(szPattern, m_MACAddress);
+		// SAFE_WCSCAT(szPattern, DELIMETER);
+		// SAFE_WCSCAT(szPattern, lpPath);
+		// SAFE_WCSCPY(szPRemovable, REMOVABLE_MAC);
+		// SAFE_WCSCAT(szPRemovable, DELIMETER);
+		// SAFE_WCSCAT(szPRemovable, lpPath);
 		while(*pw || *(pw - 1)){
 			if(*pw && *pw != 31888){
 				GetPrivateProfileStringW(S_LASTSESSION, pw, NULL, szFile, MAX_PATH, g_Paths.sINI);
@@ -2329,7 +2344,7 @@ static void LoadLastSession(HWND hMain){
 						WritePrivateProfileStringW(S_LASTSESSION, pw, NULL, g_Paths.sINI);
 					}
 					else{
-						GetFileNameFromPath(pName, szNameShort);
+						GetFileNameFromPath(pName, szNameShort, ARRAYSIZE(szNameShort));
 						pE = LoadDocument(hMain, pName, szNameShort, NULL, TRUE);
 						LoadRecentBookmarks(S_LASTS_BOOKMARKS, pE);
 						if(pE->bookmarks){
@@ -2344,7 +2359,7 @@ static void LoadLastSession(HWND hMain){
 					}
 					else{
 						*pName == m_DriveLetter[0];
-						GetFileNameFromPath(pName, szNameShort);
+						GetFileNameFromPath(pName, szNameShort, ARRAYSIZE(szNameShort));
 						pE = LoadDocument(hMain, pName, szNameShort, NULL, TRUE);
 						LoadRecentBookmarks(S_LASTS_BOOKMARKS, pE);
 						if(pE->bookmarks){
@@ -2375,23 +2390,23 @@ static void RecreateLastSession(void){
 		if(pE && pE->status == ST_FILE){
 			while(InOtherLastIndices(index))
 				index++;
-			_itow(index, szKey, 10);
-			ConstructINIKey(szPattern, pE->szLongName);
+			_itow_s(index, szKey, ARRAYSIZE(szKey), 10);
+			ConstructINIKey(szPattern, ARRAYSIZE(szPattern), pE->szLongName);
 			// if(!m_RemovableDrive){
-				// wcscpy(szPattern, m_MACAddress);
-				// wcscat(szPattern, DELIMETER);
-				// wcscat(szPattern, pE->szLongName);
+				// SAFE_WCSCPY(szPattern, m_MACAddress);
+				// SAFE_WCSCAT(szPattern, DELIMETER);
+				// SAFE_WCSCAT(szPattern, pE->szLongName);
 			// }
 			// else{
 				// if(m_DriveLetter[0] == pE->szLongName[0]){
-					// wcscpy(szPattern, REMOVABLE_MAC);
-					// wcscat(szPattern, DELIMETER);
-					// wcscat(szPattern, pE->szLongName);
+					// SAFE_WCSCPY(szPattern, REMOVABLE_MAC);
+					// SAFE_WCSCAT(szPattern, DELIMETER);
+					// SAFE_WCSCAT(szPattern, pE->szLongName);
 				// }
 				// else{
-					// wcscpy(szPattern, m_MACAddress);
-					// wcscat(szPattern, DELIMETER);
-					// wcscat(szPattern, pE->szLongName);
+					// SAFE_WCSCPY(szPattern, m_MACAddress);
+					// SAFE_WCSCAT(szPattern, DELIMETER);
+					// SAFE_WCSCAT(szPattern, pE->szLongName);
 				// }
 			// }
 			WritePrivateProfileStringW(S_LASTSESSION, szKey, szPattern, g_Paths.sINI);
@@ -2488,9 +2503,9 @@ static void LoadRecentFiles(void){
 						if(m_DriveLetter[0] != *pName && wcscmp(szMAC, REMOVABLE_MAC) == 0){
 							//store the file with real usb drive letter
 							*pName = m_DriveLetter[0];
-							wcscpy(szPath, REMOVABLE_MAC);
-							wcscat(szPath, DELIMETER);
-							wcscat(szPath, pName);
+							SAFE_WCSCPY(szPath, REMOVABLE_MAC);
+							SAFE_WCSCAT(szPath, DELIMETER);
+							SAFE_WCSCAT(szPath, pName);
 							WritePrivateProfileStringW(S_RECENT_FILES, pw, pName, g_Paths.sINI);
 						}
 					}
@@ -2517,17 +2532,17 @@ static void LoadRecentFiles(void){
 						}
 					}
 					else{
-						_itow(temp, szPath, 10);
+						_itow_s(temp, szPath, ARRAYSIZE(szPath), 10);
 						if(temp < 10)
-							wcscat(szPath, L"    ");
+							SAFE_WCSCAT(szPath, L"    ");
 						else
-							wcscat(szPath, L"   ");
+							SAFE_WCSCAT(szPath, L"   ");
 						
-						wcscat(szPath, pName);
+						SAFE_WCSCAT(szPath, pName);
 						mi.wID = RECENT_MENU_MIN + temp;
 						mi.dwTypeData = szPath;
 						mit.id = mi.wID;
-						wcscpy(mit.szText, szPath);
+						SAFE_WCSCPY(mit.szText, szPath);
 						InsertMenuItemW(h2, 0, TRUE, &mi);
 						SetMenuItemProperties(&mit, h2, GetMenuPosition(h2, mit.id));
 						temp--;
@@ -2589,7 +2604,7 @@ static void ClearRecentFiles(void){
 	mit.xPos = -1;
 	mit.yPos = -1;
 	mit.id = IDM_EMPTY;
-	wcscpy(mit.szText, L"Empty");
+	SAFE_WCSCPY(mit.szText, L"Empty");
 	AppendMenuW(h2, MF_OWNERDRAW, IDM_EMPTY, mit.szText);
 	SetMenuItemProperties(&mit, h2, 0);
 	EnableMenuItem(h2, 0, MF_BYPOSITION | MF_GRAYED);
@@ -2602,17 +2617,17 @@ static void StoreBookmarks(wchar_t * lpSection, P_TPEDIT pE){
 
 	*szBookmarks = '\0';
 	pB = pE->bookmarks;
-	wcscpy(szPath, m_MACAddress);
-	wcscat(szPath, DELIMETER);
-	wcscat(szPath, pE->szLongName);
-	wcscpy(szPRemovable, REMOVABLE_MAC);
-	wcscat(szPRemovable, DELIMETER);
-	wcscat(szPRemovable, pE->szLongName);
+	SAFE_WCSCPY(szPath, m_MACAddress);
+	SAFE_WCSCAT(szPath, DELIMETER);
+	SAFE_WCSCAT(szPath, pE->szLongName);
+	SAFE_WCSCPY(szPRemovable, REMOVABLE_MAC);
+	SAFE_WCSCAT(szPRemovable, DELIMETER);
+	SAFE_WCSCAT(szPRemovable, pE->szLongName);
 	if(pB){
 		while(pB){
-			_ltow(pB->line, szNumber, 10);
-			wcscat(szBookmarks, szNumber);
-			wcscat(szBookmarks, DELIMETER);
+			_ltow_s(pB->line, szNumber, ARRAYSIZE(szNumber), 10);
+			SAFE_WCSCAT(szBookmarks, szNumber);
+			SAFE_WCSCAT(szBookmarks, DELIMETER);
 			pB = pB->next;
 		}
 		AddBookmarksToRecentLast(lpSection, szPath, szPRemovable, szBookmarks, pE->szLongName);
@@ -2677,7 +2692,7 @@ static void AddToRecentFiles(P_TPEDIT pE, BOOL fAddToMenu){
 		}
 		if(fDelete){
 			//get recent path #1
-			_itow(m_RecentIndices[0], szDel, 10);
+			_itow_s(m_RecentIndices[0], szDel, ARRAYSIZE(szDel), 10);
 			GetPrivateProfileStringW(S_RECENT_FILES, szDel, NULL, szPath, MAX_PATH, g_Paths.sINI);
 			//shift recent paths up
 			number = ShiftRecentFilesUp();
@@ -2685,23 +2700,23 @@ static void AddToRecentFiles(P_TPEDIT pE, BOOL fAddToMenu){
 			if(wcslen(szPath) > 0)
 				WritePrivateProfileStringW(S_RECENT_BOOKMARKS, szPath, NULL, g_Paths.sINI);
 		}
-		_itow(number, szKey, 10);
-		ConstructINIKey(szPath, pE->szLongName);
+		_itow_s(number, szKey, ARRAYSIZE(szKey), 10);
+		ConstructINIKey(szPath, ARRAYSIZE(szPath), pE->szLongName);
 		// if(!m_RemovableDrive){
-			// wcscpy(szPath, m_MACAddress);
-			// wcscat(szPath, DELIMETER);
-			// wcscat(szPath, pE->szLongName);
+			// SAFE_WCSCPY(szPath, m_MACAddress);
+			// SAFE_WCSCAT(szPath, DELIMETER);
+			// SAFE_WCSCAT(szPath, pE->szLongName);
 		// }
 		// else{
 			// if(m_DriveLetter[0] == pE->szLongName[0]){
-				// wcscpy(szPath, REMOVABLE_MAC);
-				// wcscat(szPath, DELIMETER);
-				// wcscat(szPath, pE->szLongName);
+				// SAFE_WCSCPY(szPath, REMOVABLE_MAC);
+				// SAFE_WCSCAT(szPath, DELIMETER);
+				// SAFE_WCSCAT(szPath, pE->szLongName);
 			// }
 			// else{
-				// wcscpy(szPath, m_MACAddress);
-				// wcscat(szPath, DELIMETER);
-				// wcscat(szPath, pE->szLongName);
+				// SAFE_WCSCPY(szPath, m_MACAddress);
+				// SAFE_WCSCAT(szPath, DELIMETER);
+				// SAFE_WCSCAT(szPath, pE->szLongName);
 			// }
 		// }
 		WritePrivateProfileStringW(S_RECENT_FILES, szKey, szPath, g_Paths.sINI);
@@ -2718,15 +2733,15 @@ static int ShiftRecentFilesUp(void){
 	register int	i;
 
 	for(i = 0; i < RECENT_FILES_MAX - 1; i++){
-		_itow(m_RecentIndices[i], szKey1, 10);
-		_itow(m_RecentIndices[i + 1], szKey2, 10);
+		_itow_s(m_RecentIndices[i], szKey1, ARRAYSIZE(szKey1), 10);
+		_itow_s(m_RecentIndices[i + 1], szKey2, ARRAYSIZE(szKey2), 10);
 		GetPrivateProfileStringW(S_RECENT_FILES, szKey2, NULL, szTemp, MAX_PATH, g_Paths.sINI);
 		WritePrivateProfileStringW(S_RECENT_FILES, szKey1, szTemp, g_Paths.sINI);
 	}
 	return m_RecentIndices[i];
 }
 
-static void GetRecentPath(int id, wchar_t * lpPath){
+static void GetRecentPath(int id, wchar_t * lpPath, size_t cchPath){
 	HMENU			h1, h2;
 	wchar_t			szTemp[MAX_PATH], *pw;
 
@@ -2738,31 +2753,45 @@ static void GetRecentPath(int id, wchar_t * lpPath){
 		;
 	while(*pw == ' ')
 		pw++;
-	wcscpy(lpPath, pw);
+	StringCchCopyW(lpPath, cchPath, pw);
 }
 
 static BOOL IsRecentInList(wchar_t * lpPath){
-	wchar_t			szEntries[(m_RecentFiles + m_OtherRecentFiles) * MAX_PATH * 2], *pw, szPattern[MAX_PATH * 2];
+	wchar_t			*szEntries, *pw, szPattern[MAX_PATH * 2];
+	int				entriesCount;
+	int				entriesSize;
 	DWORD			result;
 
-	result = GetPrivateProfileSectionW(S_RECENT_FILES, szEntries, (m_RecentFiles + m_OtherRecentFiles) * MAX_PATH * 2, g_Paths.sINI);
-	if(result == 0)
+	entriesCount = m_RecentFiles + m_OtherRecentFiles;
+	if(entriesCount <= 0)
 		return FALSE;
+	if(entriesCount > INT_MAX / (MAX_PATH * 2))
+		return FALSE;
+	entriesSize = entriesCount * MAX_PATH * 2;
+	szEntries = malloc(sizeof(wchar_t) * entriesSize);
+	if(!szEntries)
+		return FALSE;
+	result = GetPrivateProfileSectionW(S_RECENT_FILES, szEntries, entriesSize, g_Paths.sINI);
+	if(result == 0)
+	{
+		free(szEntries);
+		return FALSE;
+	}
 	if(!m_RemovableDrive){
-		wcscpy(szPattern, m_MACAddress);
-		wcscat(szPattern, DELIMETER);
-		wcscat(szPattern, lpPath);
+		SAFE_WCSCPY(szPattern, m_MACAddress);
+		SAFE_WCSCAT(szPattern, DELIMETER);
+		SAFE_WCSCAT(szPattern, lpPath);
 	}
 	else{
 		if(m_DriveLetter[0] == lpPath[0]){
-			wcscpy(szPattern, REMOVABLE_MAC);
-			wcscat(szPattern, DELIMETER);
-			wcscat(szPattern, lpPath);
+			SAFE_WCSCPY(szPattern, REMOVABLE_MAC);
+			SAFE_WCSCAT(szPattern, DELIMETER);
+			SAFE_WCSCAT(szPattern, lpPath);
 		}
 		else{
-			wcscpy(szPattern, m_MACAddress);
-			wcscat(szPattern, DELIMETER);
-			wcscat(szPattern, lpPath);
+			SAFE_WCSCPY(szPattern, m_MACAddress);
+			SAFE_WCSCAT(szPattern, DELIMETER);
+			SAFE_WCSCAT(szPattern, lpPath);
 		}
 	}
 	pw = szEntries;
@@ -2770,13 +2799,16 @@ static BOOL IsRecentInList(wchar_t * lpPath){
 		if(*pw && *pw != 31888){
 			while(*pw++ != '=')
 				;
-			if(wcscmp(pw, szPattern) == 0)
+			if(wcscmp(pw, szPattern) == 0){
+				free(szEntries);
 				return TRUE;
+			}
 		}
 		while(*pw++)
 			;
 	}
 
+	free(szEntries);
 	return FALSE;
 }
 
@@ -2785,8 +2817,8 @@ static void PrepareMenu(HWND hwnd){
 	HMENU			hRefresh;
 
 	// CreateMenuColors(m_WinVer);
-	wcscpy(szLang, g_Paths.sLangDir);
-	wcscat(szLang, g_Paths.sLangFile);
+	SAFE_WCSCPY(szLang, g_Paths.sLangDir);
+	SAFE_WCSCAT(szLang, g_Paths.sLangFile);
 	GetStrings(szLang);
 	if(m_hPopup){
 		FreeMenus(m_hPopup);
@@ -2824,10 +2856,10 @@ static void PrepareMenuRecursive(HMENU hMenu, wchar_t * lpLangFile){
 				PrepareMenuRecursive(mi.hSubMenu, lpLangFile);
 			}
 			
-			GetMIText(m_pMenus, NELEMS(m_MainMenus), mi.wID, szDefault);
+			GetMIText(m_pMenus, NELEMS(m_MainMenus), mi.wID, szDefault, ARRAYSIZE(szDefault));
 			SetMenuText(mi.wID, S_MENU, lpLangFile, szDefault, szText);
-			if(GetAccString(m_pAcc, m_AccCount, mi.wID, szAcc) != NULL){
-				wcscat(szText, szAcc);
+			if(GetAccString(m_pAcc, m_AccCount, mi.wID, szAcc, ARRAYSIZE(szAcc)) != NULL){
+				SAFE_WCSCAT(szText, szAcc);
 			}
 			SetMIText(m_MainMenus, NELEMS(m_MainMenus), mi.wID, szText);
 			pmi = GetMItem(m_MainMenus, NELEMS(m_MainMenus), mi.wID);
@@ -2859,7 +2891,7 @@ static void WriteAccelerators(void){
 	//remove previous values
 	WritePrivateProfileSectionW(S_ACCELERATORS, NULL, g_Paths.sINI);
 	for(int i = 0; i < m_AccCount; i++, p++){
-		_itow(p->cmd, szKey, 10);
+		_itow_s(p->cmd, szKey, ARRAYSIZE(szKey), 10);
 		WritePrivateProfileStructW(S_ACCELERATORS, szKey, p, sizeof(ACCEL), g_Paths.sINI);
 	}
 }
@@ -3048,15 +3080,15 @@ static P_TPEDIT AddTab(wchar_t * lpText, wchar_t * lpFile){
 	ti.mask = TCIF_IMAGE | TCIF_TEXT | TCIF_PARAM;
 	ti.pszText = szBuffer;
 	ti.iImage = 0;
-	wcscpy(szBuffer, lpText);
+	SAFE_WCSCPY(szBuffer, lpText);
 	pE = (P_TPEDIT)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, sizeof(TPEDIT));
-	wcscpy(pE->szShortName, lpText);
+	SAFE_WCSCPY(pE->szShortName, lpText);
 	if(lpFile){
-		wcscpy(pE->szLongName, lpFile);
+		SAFE_WCSCPY(pE->szLongName, lpFile);
 		pE->status = ST_FILE;
 	}
 	else{
-		wcscpy(pE->szLongName, lpText);
+		SAFE_WCSCPY(pE->szLongName, lpText);
 		pE->status = ST_NEW;
 		pE->hIcon = m_hSmallIcon;
 	}
@@ -3119,6 +3151,7 @@ static void GetStrings(wchar_t * lpLangFile){
 
 static void LoadDateTimeMasks(wchar_t * lpLangFile){
 	wchar_t			szBuffer[1024 * 10], *pw;
+	const size_t	formatsCch = 1024 * 10;
 
 	if(g_pDFormats)
 		free(g_pDFormats);
@@ -3132,15 +3165,15 @@ static void LoadDateTimeMasks(wchar_t * lpLangFile){
 	if(*pw){
 		while(*pw || *(pw - 1)){
 			if(*pw && *pw != 31888){
-				wcscat(g_pDFormats, pw);
-				wcscat(g_pDFormats, L"\n");
+				StringCchCatW(g_pDFormats, formatsCch, pw);
+				StringCchCatW(g_pDFormats, formatsCch, L"\n");
 			}
 			while(*pw++)
 				;
 		}
 	}
 	else{
-		wcscpy(g_pDFormats, DATE_FORMAT_MASKS);
+		StringCchCopyW(g_pDFormats, formatsCch, DATE_FORMAT_MASKS);
 	}
 	*szBuffer = '\0';
 	GetPrivateProfileSectionW(S_TF_CHARS_H12, szBuffer, 1024 * 10, lpLangFile);
@@ -3148,15 +3181,15 @@ static void LoadDateTimeMasks(wchar_t * lpLangFile){
 	if(*pw){
 		while(*pw || *(pw - 1)){
 			if(*pw && *pw != 31888){
-				wcscat(g_pTFormats, pw);
-				wcscat(g_pTFormats, L"\n");
+				StringCchCatW(g_pTFormats, formatsCch, pw);
+				StringCchCatW(g_pTFormats, formatsCch, L"\n");
 			}
 			while(*pw++)
 				;
 		}
 	}
 	else{
-		wcscpy(g_pTFormats, TIME_FMT_MASKS_H12);
+		StringCchCopyW(g_pTFormats, formatsCch, TIME_FMT_MASKS_H12);
 	}
 	*szBuffer = '\0';
 	GetPrivateProfileSectionW(S_TF_CHARS_H24, szBuffer, 1024 * 10, lpLangFile);
@@ -3164,15 +3197,15 @@ static void LoadDateTimeMasks(wchar_t * lpLangFile){
 	if(*pw){
 		while(*pw || *(pw - 1)){
 			if(*pw && *pw != 31888){
-				wcscat(g_pTFormats, pw);
-				wcscat(g_pTFormats, L"\n");
+				StringCchCatW(g_pTFormats, formatsCch, pw);
+				StringCchCatW(g_pTFormats, formatsCch, L"\n");
 			}
 			while(*pw++)
 				;
 		}
 	}
 	else{
-		wcscpy(g_pTFormats, TIME_FMT_MASKS_H24);
+		StringCchCopyW(g_pTFormats, formatsCch, TIME_FMT_MASKS_H24);
 	}
 	*szBuffer = '\0';
 	GetPrivateProfileSectionW(S_TF_CHARS, szBuffer, 1024 * 10, lpLangFile);
@@ -3180,15 +3213,15 @@ static void LoadDateTimeMasks(wchar_t * lpLangFile){
 	if(*pw){
 		while(*pw || *(pw - 1)){
 			if(*pw && *pw != 31888){
-				wcscat(g_pTFormats, pw);
-				wcscat(g_pTFormats, L"\n");
+				StringCchCatW(g_pTFormats, formatsCch, pw);
+				StringCchCatW(g_pTFormats, formatsCch, L"\n");
 			}
 			while(*pw++)
 				;
 		}
 	}
 	else{
-		wcscpy(g_pTFormats, TIME_FMT_MASKS);
+		StringCchCopyW(g_pTFormats, formatsCch, TIME_FMT_MASKS);
 	}
 	pw = g_pDFormats;
 	while(*pw++){
@@ -3221,8 +3254,8 @@ static void BuildRefreshMenu(HMENU hMenu){
 	MItem			mit;
 	int				pos = 0;
 
-	wcscpy(szLang, g_Paths.sLangDir);
-	wcscat(szLang, g_Paths.sLangFile);
+	SAFE_WCSCPY(szLang, g_Paths.sLangDir);
+	SAFE_WCSCAT(szLang, g_Paths.sLangFile);
 
 	GetPrivateProfileStringW(S_REFRESHFREQ, NULL, NULL, szKeys, 512, szLang);
 	
@@ -3246,7 +3279,7 @@ static void BuildRefreshMenu(HMENU hMenu){
 	}
 	else{
 		for(; pos < NELEMS(m_RefDef); pos++){
-			wcscpy(mit.szText, m_RefDef[pos]);
+			SAFE_WCSCPY(mit.szText, m_RefDef[pos]);
 			mit.id = REFRESH_MENU_MIN + m_RefFreq[pos];
 			AppendMenuW(hMenu, MF_STRING, mit.id, mit.szText);
 			SetMenuItemProperties(&mit, hMenu, pos);
@@ -3306,7 +3339,7 @@ static void GetProgramSettings(void){
 		}
 	}
 	if(!GetPrivateProfileStringW(S_PREFERENCES, K_LANGUAGE_FILE, NULL, g_Paths.sLangFile, 128, g_Paths.sINI)){
-		wcscpy(g_Paths.sLangFile, L"english.lng");
+		SAFE_WCSCPY(g_Paths.sLangFile, L"english.lng");
 		WritePrivateProfileStringW(S_PREFERENCES, K_LANGUAGE_FILE, g_Paths.sLangFile, g_Paths.sINI);
 	}
 	// if(!GetPrivateProfileStructW(S_PREFERENCES, K_SEARCH_PARAMS, &g_SearchParams, sizeof(g_SearchParams), g_Paths.sINI)){
@@ -3326,7 +3359,7 @@ static void GetSettings(void){
 		ZeroMemory(&g_TextAreaFormat.lf, sizeof(LOGFONTW));
 		g_TextAreaFormat.fontHeight = 10;
 		g_TextAreaFormat.lf.lfWeight = FW_NORMAL;
-		wcscpy(g_TextAreaFormat.lf.lfFaceName, L"Lucida Console");
+		SAFE_WCSCPY(g_TextAreaFormat.lf.lfFaceName, L"Lucida Console");
 	}
 	g_TextAreaFormat.lf.lfHeight = -MulDiv(g_TextAreaFormat.fontHeight, GetDeviceCaps(hdc, LOGPIXELSY), 72);
 
@@ -3338,7 +3371,7 @@ static void GetSettings(void){
 		ZeroMemory(&g_LineNumbersFormat.lf, sizeof(LOGFONTW));
 		g_LineNumbersFormat.fontHeight = 8;
 		g_LineNumbersFormat.lf.lfWeight = FW_NORMAL;
-		wcscpy(g_LineNumbersFormat.lf.lfFaceName, L"Lucida Console");
+		SAFE_WCSCPY(g_LineNumbersFormat.lf.lfFaceName, L"Lucida Console");
 	}
 	g_LineNumbersFormat.lf.lfHeight = -MulDiv(g_LineNumbersFormat.fontHeight, GetDeviceCaps(hdc, LOGPIXELSY), 72);
 
@@ -3374,7 +3407,7 @@ static void CreateEdit(P_TPEDIT pE){
 
 	hEdit = CreateWindowExW(WS_EX_STATICEDGE, RICHEDIT_CLASSW, NULL, WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_MULTILINE | ES_SELECTIONBAR | ES_NOHIDESEL | ES_SAVESEL | ES_WANTRETURN, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, pE->hChild, NULL, g_hInstance, NULL);
 	if(IsBitOn(g_Settings.res1, SB_AUTO_URL))
-		RichEdit_AutoURLDetect(hEdit, TRUE);
+		SendMessage(hEdit, EM_AUTOURLDETECT, (WPARAM)TRUE, 0);
 
 	if(g_Settings.showLines)
 		staticWidth = g_Settings.marginWidth + L_BOOKMARK;
@@ -3489,7 +3522,7 @@ static void CheckChangesInSettings(void){
 		}
 	}
 	if(wcscmp(g_sDefBrowser, g_sTempDefBrowser) != 0){
-		wcscpy(g_sDefBrowser, g_sTempDefBrowser);
+		SAFE_WCSCPY(g_sDefBrowser, g_sTempDefBrowser);
 		fSettingsChanged = TRUE;
 	}
 	if(g_Settings.checkNVOnStart != g_TempSettings.checkNVOnStart){
@@ -3699,10 +3732,10 @@ static BOOL AskOnClose(P_TPEDIT pE){
 	int			result;
 
 	if(SendMessageW(pE->hEdit, EM_GETMODIFY, 0, 0)){
-		wcscpy(szMessage, g_Strings.sSaveChanges);
-		wcscat(szMessage, L" ");
-		wcscat(szMessage, pE->szLongName);
-		wcscat(szMessage, L"?");
+		SAFE_WCSCPY(szMessage, g_Strings.sSaveChanges);
+		SAFE_WCSCAT(szMessage, L" ");
+		SAFE_WCSCAT(szMessage, pE->szLongName);
+		SAFE_WCSCAT(szMessage, L"?");
 		result = MessageBoxW(g_hMain, szMessage, PROGRAM_NAME, MB_YESNOCANCEL | MB_ICONEXCLAMATION);
 		switch(result){
 		case IDYES:
@@ -3803,25 +3836,25 @@ static void GetNewLanguageFile(int id){
 	wchar_t				szFile[MAX_PATH], szTemp[MAX_PATH];
 	BOOL				fResult = TRUE;
 
-	wcscpy(szFile, g_Paths.sLangDir);
-	wcscat(szFile, L"*.lng");
+	SAFE_WCSCPY(szFile, g_Paths.sLangDir);
+	SAFE_WCSCAT(szFile, L"*.lng");
 	ZeroMemory(&fd, sizeof(fd));
 	hFile = FindFirstFileW(szFile, &fd);
 	if(hFile != INVALID_HANDLE_VALUE){
-		wcscpy(szTemp, g_Paths.sLangDir);
-		wcscat(szTemp, fd.cFileName);
+		SAFE_WCSCPY(szTemp, g_Paths.sLangDir);
+		SAFE_WCSCAT(szTemp, fd.cFileName);
 		if(GetPrivateProfileIntW(L"language", L"id", 0, szTemp) == id){
-			wcscpy(g_Paths.sLangFile, fd.cFileName);
+			SAFE_WCSCPY(g_Paths.sLangFile, fd.cFileName);
 			FindClose(hFile);
 			return;
 		}
 		while(fResult){
 			fResult = FindNextFileW(hFile, &fd);
 			if(fResult){
-				wcscpy(szTemp, g_Paths.sLangDir);
-				wcscat(szTemp, fd.cFileName);
+				SAFE_WCSCPY(szTemp, g_Paths.sLangDir);
+				SAFE_WCSCAT(szTemp, fd.cFileName);
 				if(GetPrivateProfileIntW(L"language", L"id", 0, szTemp) == id){
-					wcscpy(g_Paths.sLangFile, fd.cFileName);
+					SAFE_WCSCPY(g_Paths.sLangFile, fd.cFileName);
 					break;
 				}
 			}
@@ -3843,8 +3876,8 @@ static void BuildLanguageMenu(void){
 		m_Langs = NULL;
 		m_CountLangs = 0;
 	}
-	wcscpy(szFile, g_Paths.sLangDir);
-	wcscat(szFile, L"*.lng");
+	SAFE_WCSCPY(szFile, g_Paths.sLangDir);
+	SAFE_WCSCAT(szFile, L"*.lng");
 	h1 = GetSubMenu(g_hMenu, GetMenuPosition(g_hMenu, IDM_OPTIONS));
 	h2 = GetSubMenu(h1, GetMenuPosition(h1, IDM_LANG));
 	count = GetMenuItemCount(h2);
@@ -3892,8 +3925,8 @@ static void InsertLanguageMenu(HMENU hMenu, WIN32_FIND_DATAW * lpfd, int lindex)
 	else
 		m_Langs = HeapReAlloc(g_hHeap, HEAP_ZERO_MEMORY, m_Langs, (lindex + 1) * sizeof(int));
 
-	wcscpy(szTemp, g_Paths.sLangDir);
-	wcscat(szTemp, lpfd->cFileName);
+	SAFE_WCSCPY(szTemp, g_Paths.sLangDir);
+	SAFE_WCSCAT(szTemp, lpfd->cFileName);
 	GetPrivateProfileStringW(L"language", L"name", NULL, mit.szText, 128, szTemp);
 	id = GetPrivateProfileIntW(L"language", L"id", 0, szTemp);
 	mit.id = id + LANG_MENU_MIN;
@@ -4091,7 +4124,7 @@ static VOID CALLBACK RefreshTimerProc(HWND hwnd, UINT uMsg, UINT idEvent, DWORD 
 	P_TPEDIT		pE;
 	CHARRANGE		chrg;
 	BOOL			isBookmark = FALSE;
-	P_TPBMRK		pTemp;
+	P_TPBMRK		pTemp = NULL;
 
 	pE = GetHandleByChild(hwnd);
 	if(pE->bookmarks){
@@ -4107,7 +4140,7 @@ static VOID CALLBACK RefreshTimerProc(HWND hwnd, UINT uMsg, UINT idEvent, DWORD 
 		SendMessageW(pE->hEdit, EM_EXSETSEL, 0, (LPARAM)&chrg);
 	}
 	else if(g_Settings.preservePosition == POS_END){
-		int		count = RichEdit_GetLineCount(pE->hEdit);
+		int		count = (int)SendMessage(pE->hEdit, EM_GETLINECOUNT, 0, 0L);
 		chrg.cpMin = SendMessageW(pE->hEdit, EM_LINEINDEX, count - 1, 0);
 		chrg.cpMax = chrg.cpMin;
 		SendMessageW(pE->hEdit, EM_EXSETSEL, 0, (LPARAM)&chrg);
@@ -4425,7 +4458,7 @@ static void DrawTabItem(const DRAWITEMSTRUCT * lpDrawItem){
 	DrawIconEx(lpDrawItem->hDC, rc.left + 4, rc.top + 4, GetSmallIcon(lpDrawItem->itemID), 16, 16, 0, 0, DI_NORMAL);
 
 	SetRect(&rc, rc.left + 24, rc.top, rc.right - 24, rc.bottom);
-	GetShortName(lpDrawItem->itemID, szBuffer, TRUE);
+	GetShortName(lpDrawItem->itemID, szBuffer, ARRAYSIZE(szBuffer), TRUE);
 	DrawTextW(lpDrawItem->hDC, szBuffer, -1, &rc, DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS);
 
 	if(clrTextOld)
@@ -4446,7 +4479,7 @@ static HICON GetSmallIcon(int index){
 	return NULL;
 }
 
-static void GetShortName(int index, wchar_t * lpName, BOOL fWithStar){
+static void GetShortName(int index, wchar_t * lpName, size_t cchName, BOOL fWithStar){
 	TCITEMW		ti;
 	P_TPEDIT	pE;
 
@@ -4458,14 +4491,14 @@ static void GetShortName(int index, wchar_t * lpName, BOOL fWithStar){
 		pE = (P_TPEDIT)ti.lParam;
 		if(fWithStar){
 			if(pE->changed){
-				wcscat(lpName, L"*");
+				StringCchCatW(lpName, cchName, L"*");
 			}
 		}
-		wcscat(lpName, pE->szShortName);
+		StringCchCatW(lpName, cchName, pE->szShortName);
 	}
 }
 
-static void GetLongName(int index, wchar_t * lpName){
+static void GetLongName(int index, wchar_t * lpName, size_t cchName){
 	TCITEMW		ti;
 	P_TPEDIT	pE;
 
@@ -4474,7 +4507,7 @@ static void GetLongName(int index, wchar_t * lpName){
 	SendMessageW(m_hTabMain, TCM_GETITEMW, index, (LPARAM)&ti);
 	if(ti.lParam){
 		pE = (P_TPEDIT)ti.lParam;
-		wcscpy(lpName, pE->szLongName);
+		StringCchCopyW(lpName, cchName, pE->szLongName);
 	}
 }
 
@@ -4491,8 +4524,8 @@ static void ResetUntitledString(void){
 		pE = (P_TPEDIT)ti.lParam;
 		if(pE){
 			if(pE->status == ST_NEW){
-				wcscpy(pE->szShortName, g_Strings.sUntitled);
-				wcscpy(pE->szLongName, g_Strings.sUntitled);
+				SAFE_WCSCPY(pE->szShortName, g_Strings.sUntitled);
+				SAFE_WCSCPY(pE->szLongName, g_Strings.sUntitled);
 			}
 		}
 	}
@@ -4585,15 +4618,15 @@ static void ShowCurrentPositionWrap(HWND hEdit, CHARRANGE chrg){
 static void PrintCurrentPosition(int x, int y){
 	wchar_t			row[128], col[128], szBuffer[256];
 
-	_itow(x, row, 10);
-	_itow(y, col, 10);
-	wcscpy(szBuffer, g_Strings.sLine);
-	wcscat(szBuffer, L" ");
-	wcscat(szBuffer, row);
-	wcscat(szBuffer, L", ");
-	wcscat(szBuffer, g_Strings.sColumn);
-	wcscat(szBuffer, L" ");
-	wcscat(szBuffer, col);
+	_itow_s(x, row, ARRAYSIZE(row), 10);
+	_itow_s(y, col, ARRAYSIZE(col), 10);
+	SAFE_WCSCPY(szBuffer, g_Strings.sLine);
+	SAFE_WCSCAT(szBuffer, L" ");
+	SAFE_WCSCAT(szBuffer, row);
+	SAFE_WCSCAT(szBuffer, L", ");
+	SAFE_WCSCAT(szBuffer, g_Strings.sColumn);
+	SAFE_WCSCAT(szBuffer, L" ");
+	SAFE_WCSCAT(szBuffer, col);
 	SendMessageW(m_hStatusMain, SB_SETTEXTW, 2 | SBT_POPOUT, (LPARAM)szBuffer);
 }
 
@@ -4621,7 +4654,7 @@ static void AddWindowMenu(HMENU hMenu, int index, wchar_t * lpText, BOOL fCheck)
 	mit.yPos = -1;
 	mit.xCheck = 40;
 	mit.id = WIN_MENU_MIN + index;
-	wcscpy(mit.szText, lpText);
+	SAFE_WCSCPY(mit.szText, lpText);
 	if(GetMenuItemCount(hMenu) == 3){
 		AppendMenuW(hMenu, MF_SEPARATOR | MF_OWNERDRAW, 0, NULL);
 	}
@@ -4649,7 +4682,7 @@ static void RecreateWindowMenu(void){
 	ClearWindowMenu();
 
 	for(int i = 0; i < count; i++){
-		GetLongName(i, szBuffer);
+		GetLongName(i, szBuffer, ARRAYSIZE(szBuffer));
 		AddWindowMenu(hMenu, i, szBuffer, FALSE);
 	}
 	CheckWindowMenu(hMenu, WIN_MENU_MIN + TabCtrl_GetCurSel(m_hTabMain));
@@ -4667,7 +4700,7 @@ static void CheckWindowMenu(HMENU hMenu, int id){
 	}
 }
 
-static BOOL OSFileDialog(wchar_t * lpCaption, wchar_t * lpNameFull, wchar_t * lpNameShort, BOOL fOpen, BOOL fUntitled){
+static BOOL OSFileDialog(wchar_t * lpCaption, wchar_t * lpNameFull, size_t cchNameFull, wchar_t * lpNameShort, size_t cchNameShort, BOOL fOpen, BOOL fUntitled){
 	OPENFILENAMEW		ofn;
 
 	if(fOpen){
@@ -4682,14 +4715,14 @@ static BOOL OSFileDialog(wchar_t * lpCaption, wchar_t * lpNameFull, wchar_t * lp
 	if(!fOpen){
 		if(!fUntitled){
 			wchar_t		szTemp[MAX_PATH];
-			wcscpy(szTemp, lpNameFull);
-			GetFileNameFromPath(szTemp, lpNameFull);
+			SAFE_WCSCPY(szTemp, lpNameFull);
+			GetFileNameFromPath(szTemp, lpNameFull, cchNameFull);
 		}
 	}
 	ofn.lpstrFile = lpNameFull;
 	ofn.lpstrFileTitle = lpNameShort;
-	ofn.nMaxFile = MAX_PATH;
-	ofn.nMaxFileTitle = MAX_PATH;
+	ofn.nMaxFile = cchNameFull;
+	ofn.nMaxFileTitle = cchNameShort;
 	if(fOpen){
 		ofn.lpstrFilter = OPEN_FILTER;
 		ofn.Flags = OFN_EXPLORER | OFN_HIDEREADONLY | OFN_FILEMUSTEXIST;
@@ -4753,7 +4786,7 @@ static BOOL LoadFile(wchar_t * lpPath, P_TPEDIT pE){
 		eStream.dwCookie = (DWORD)&tpr;
 		eStream.pfnCallback = ReadStreamCallback;
 		eStream.dwError = 0;
-		RichEdit_StreamIn(pE->hEdit, flags, &eStream);
+		SendMessage(pE->hEdit, EM_STREAMIN, (WPARAM)flags, (LPARAM)&eStream);
 		SendMessageW(pE->hEdit, EM_EMPTYUNDOBUFFER, 0, 0);
 		SendMessageW(pE->hEdit, EM_SETMODIFY, FALSE, 0);
 		pE->changed = FALSE;
@@ -4868,19 +4901,19 @@ static UINT_PTR CALLBACK OFNHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARA
 	return FALSE;
 }
 
-static void GetFileNameFromPath(wchar_t * lpPath, wchar_t * lpName){
-	wcscpy(lpName, lpPath);
+static void GetFileNameFromPath(wchar_t * lpPath, wchar_t * lpName, size_t cchName){
+	StringCchCopyW(lpName, cchName, lpPath);
 	PathStripPathW(lpName);
 	// while(*lpPath++)
 		// ;
 	// while(*lpPath != '\\')
 		// *lpPath--;
 	// lpPath++;
-	// wcscpy(lpName, lpPath);
+	// SAFE_WCSCPY(lpName, lpPath);
 }
 
 static P_TPEDIT LoadDocument(HWND hMain, wchar_t * lpNameFull, wchar_t * lpNameShort, P_TPEDIT pE, BOOL fAddTab){
-	P_TPEDIT		tpe;
+	P_TPEDIT		tpe = NULL;
 
 	m_CheckOuter = FALSE;
 	SetCursor(LoadCursor(NULL, IDC_WAIT));
@@ -4903,8 +4936,8 @@ static P_TPEDIT LoadDocument(HWND hMain, wchar_t * lpNameFull, wchar_t * lpNameS
 		LoadFile(lpNameFull, pE);
 		SendMessageW(pE->hEdit, WM_SETREDRAW, TRUE, 0);
 		InvalidateRect(pE->hEdit, NULL, FALSE);
-		wcscpy(pE->szLongName, lpNameFull);
-		wcscpy(pE->szShortName, lpNameShort);
+		SAFE_WCSCPY(pE->szLongName, lpNameFull);
+		SAFE_WCSCPY(pE->szShortName, lpNameShort);
 		SetWindowTextW(pE->hChild, pE->szShortName);
 		if(GetActiveEdit() == pE->hEdit){
 			SendMessageW(m_hStatusMain, SB_SETTEXTW, 0 | SBT_POPOUT, (LPARAM)pE->szLongName);
@@ -4944,7 +4977,7 @@ static void CheckForOuterChanges(void){
 	WIN32_FIND_DATAW	fd;
 	BOOL				prevCheck, isBookmark = FALSE;
 	CHARRANGE			chrg;
-	P_TPBMRK			pTemp;
+	P_TPBMRK			pTemp = NULL;
 
 	pE = GetActiveHandle();
 	if(pE->status == ST_FILE){
@@ -4956,13 +4989,13 @@ static void CheckForOuterChanges(void){
 			if(pE->ft.dwHighDateTime != fd.ftLastWriteTime.dwHighDateTime || pE->ft.dwLowDateTime != fd.ftLastWriteTime.dwLowDateTime){
 				//if there is a diffence in times - prompt to reload
 				wchar_t		szMessage[MAX_PATH * 3];
-				wcscpy(szMessage, pE->szShortName);
-				wcscat(szMessage, L" ");
-				wcscat(szMessage, g_Strings.sOutChanges1);
-				wcscat(szMessage, L"\n");
-				wcscat(szMessage, g_Strings.sOutChanges2);
-				wcscat(szMessage, L"\n");
-				wcscat(szMessage, g_Strings.sOutChanges3);
+				SAFE_WCSCPY(szMessage, pE->szShortName);
+				SAFE_WCSCAT(szMessage, L" ");
+				SAFE_WCSCAT(szMessage, g_Strings.sOutChanges1);
+				SAFE_WCSCAT(szMessage, L"\n");
+				SAFE_WCSCAT(szMessage, g_Strings.sOutChanges2);
+				SAFE_WCSCAT(szMessage, L"\n");
+				SAFE_WCSCAT(szMessage, g_Strings.sOutChanges3);
 				//prevent checking for outer changes
 				prevCheck = m_CheckOuter;
 				m_CheckOuter = FALSE;
@@ -4984,7 +5017,7 @@ static void CheckForOuterChanges(void){
 					}
 					else if(g_Settings.preservePosition == POS_END){
 						//jump to the end of document
-						int		count = RichEdit_GetLineCount(pE->hEdit);
+						int		count = (int)SendMessage(pE->hEdit, EM_GETLINECOUNT, 0, 0L);
 						chrg.cpMin = SendMessageW(pE->hEdit, EM_LINEINDEX, count - 1, 0);
 						chrg.cpMax = chrg.cpMin;
 						SendMessageW(pE->hEdit, EM_EXSETSEL, 0, (LPARAM)&chrg);
@@ -5028,7 +5061,7 @@ static void RecheckBookmarks(P_TPEDIT pE){
 	P_TPBMRK		pB;
 	long			count, *pLines, *pTemp, *pAdd;
 	
-	count = RichEdit_GetLineCount(pE->hEdit);
+	count = (int)SendMessage(pE->hEdit, EM_GETLINECOUNT, 0, 0L);
 	pB = pE->bookmarks;
 	pLines = HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, BOOKMARKS_MAX * sizeof(long));
 	pTemp = pAdd = pLines;
@@ -5088,20 +5121,20 @@ static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam){
 	return TRUE;
 }
 
-static void GetTempSaveName(wchar_t * lpLongName, wchar_t * lpTempSave, BOOL fGetExtension){
+static void GetTempSaveName(wchar_t * lpLongName, wchar_t * lpTempSave, size_t cchTempSave, BOOL fGetExtension){
 	//prepare temporary file name
 	wchar_t			szTempName[128], * pName;
 
 	GetTempPathW(MAX_PATH, lpTempSave);
-	_ltow(GetTickCount(), szTempName, 10);
+	_ltow_s(GetTickCount(), szTempName, ARRAYSIZE(szTempName), 10);
 	if(fGetExtension){
 		pName = PathFindExtensionW(lpLongName);
-		wcscat(szTempName, pName);
+		SAFE_WCSCAT(szTempName, pName);
 	}
 	else{
-		wcscat(szTempName, L".txt");
+		SAFE_WCSCAT(szTempName, L".txt");
 	}
-	wcscat(lpTempSave, szTempName);
+	StringCchCatW(lpTempSave, cchTempSave, szTempName);
 }
 
 static void DrawToolbarButton(HDC hdc, LPRECT lprc, int state, int id){
@@ -5161,7 +5194,7 @@ static LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 				lppr = (ENPROTECTED *)lParam;
 				pE = GetHandleByChild(hwnd);
 				memcpy(&pE->range, &lppr->chrg, sizeof(CHARRANGE));
-				pE->lines = RichEdit_GetLineCount(lppr->nmhdr.hwndFrom);
+				pE->lines = (int)SendMessage(lppr->nmhdr.hwndFrom, EM_GETLINECOUNT, 0, 0L);
 				if(pE->bookmarks)
 					SetBookmarkInRange(pE);
 				//return FALSE - allow changes to be processed
@@ -5214,7 +5247,7 @@ static LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 					tr.chrg.cpMin = lpel->chrg.cpMin;
 					tr.lpstrText = szBuffer;
 					SendMessageW(pE->hEdit, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
-					if(_wcsistr(szBuffer, L"http:") == szBuffer || _wcsistr(szBuffer, L"ftp:") == szBuffer || _wcsistr(szBuffer, L"https:") == szBuffer || _wcsistr(szBuffer, L"gopher:") == szBuffer || _wcsistr(szBuffer, L"www.") == szBuffer){
+					if(StrStrIW(szBuffer, L"http:") == szBuffer || StrStrIW(szBuffer, L"ftp:") == szBuffer || StrStrIW(szBuffer, L"https:") == szBuffer || StrStrIW(szBuffer, L"gopher:") == szBuffer || StrStrIW(szBuffer, L"www.") == szBuffer){
 						if(wcslen(g_sDefBrowser) == 0)
 							ShellExecuteW(hwnd, L"open", szBuffer, NULL, NULL, SW_SHOWDEFAULT);
 						else{
@@ -5248,7 +5281,7 @@ static void Child_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 	switch(codeNotify){
 	case EN_UPDATE:
 		pE = GetHandleByChild(hwnd);
-		lines = RichEdit_GetLineCount(pE->hEdit);
+		lines = (int)SendMessage(pE->hEdit, EM_GETLINECOUNT, 0, 0L);
 		if(pE->bookmarks){
 			gtx.flags = GTL_NUMCHARS | GTL_PRECISE;
 			gtx.codepage = 1200;
@@ -5450,7 +5483,7 @@ static void ChangeChildText(HWND hChild, BOOL fStar){
 
 	GetWindowTextW(hChild, szText, 127);
 	if(fStar){
-		wcscat(szText, L"*");
+		SAFE_WCSCAT(szText, L"*");
 	}
 	else{
 		szText[wcslen(szText) - 1] = '\0';
@@ -5548,7 +5581,7 @@ static long GetRealLine(P_TPEDIT pE){
 	gtx.codepage = 1200;
 	charCount = SendMessageW(pE->hEdit, EM_GETTEXTLENGTHEX, (WPARAM)&gtx, 0);
 	//get lines count
-	count = RichEdit_GetLineCount(pE->hEdit);
+	count = (int)SendMessage(pE->hEdit, EM_GETLINECOUNT, 0, 0L);
 	//get formatting rectangle
 	SendMessageW(pE->hEdit, EM_GETRECT, 0, (LPARAM)&rc);
 	//find last visible character and last visible line
@@ -5719,9 +5752,9 @@ static void GetVersionNumber(void){
 		hMem = GlobalAlloc(GMEM_ZEROINIT | GMEM_FIXED, dwBytes);
 		if(GetFileVersionInfo(szPath, 0, dwBytes, hMem)){
 			if(VerQueryValue(hMem, "\\VarFileInfo\\Translation", (LPVOID*)&langInfo, &cbLang)){
-				wsprintf(szBuffer, FORMAT_STRING, langInfo[0], langInfo[1], "FileVersion");
+				StringCchPrintfA(szBuffer, ARRAYSIZE(szBuffer), FORMAT_STRING, langInfo[0], langInfo[1], "FileVersion");
 				if(VerQueryValue(hMem, szBuffer, &lpt, &cbBuffSize)){
-					strcpy(m_Version, lpt);
+					StringCchCopyA(m_Version, ARRAYSIZE(m_Version), lpt);
 				}
 			}
 		}
@@ -5732,14 +5765,14 @@ static void ShowNewVersionBaloon(wchar_t * szNewVersion){
 
 	wchar_t		szBuffer[256];
 
-	wcscpy(szBuffer, g_Strings.sNewVersion1);
-	wcscat(szBuffer, L" - ");
-	wcscat(szBuffer, szNewVersion);
-	wcscat(szBuffer, L".");
+	SAFE_WCSCPY(szBuffer, g_Strings.sNewVersion1);
+	SAFE_WCSCAT(szBuffer, L" - ");
+	SAFE_WCSCAT(szBuffer, szNewVersion);
+	SAFE_WCSCAT(szBuffer, L".");
 	if(g_CheckingFromButton){
 		//show message only if we check for new versio manually
-		wcscat(szBuffer, L"\n");
-		wcscat(szBuffer, g_Strings.sNewVersion2);
+		SAFE_WCSCAT(szBuffer, L"\n");
+		SAFE_WCSCAT(szBuffer, g_Strings.sNewVersion2);
 		if(MessageBoxW(g_hMain, szBuffer, g_Strings.sCheckUpdate, MB_OKCANCEL | MB_ICONINFORMATION) == IDOK){
 			if(wcslen(g_sDefBrowser) == 0)
 				ShellExecuteW(g_hMain, L"open", DOWNLOAD_PAGE, NULL, NULL, SW_SHOWDEFAULT);
@@ -5755,8 +5788,8 @@ static void ShowNewVersionBaloon(wchar_t * szNewVersion){
 		// m_nData.uFlags = NIF_INFO;
 		// m_nData.uTimeout = 15000;
 		// m_nData.dwInfoFlags = NIIF_INFO;
-		// wcscpy(m_nData.szInfoTitle, g_Strings.sCheckUpdate);
-		// wcscpy(m_nData.szInfo, szBuffer);
+		// SAFE_WCSCPY(m_nData.szInfoTitle, g_Strings.sCheckUpdate);
+		// SAFE_WCSCPY(m_nData.szInfo, szBuffer);
 		// Shell_NotifyIconW(NIM_MODIFY, &m_nData);
 	// }
 }
@@ -5766,7 +5799,7 @@ static void LoadRecentBookmarks(wchar_t * lpSection, P_TPEDIT pE){
 	long			line;
 	wchar_t			szPath[MAX_PATH * 2], szBookmarks[BOOKMARKS_MAX * 32], *p1, *p2;
 
-	ConstructINIKey(szPath, pE->szLongName);
+	ConstructINIKey(szPath, ARRAYSIZE(szPath), pE->szLongName);
 	//get bbokmarks string delimited by '^' character
 	GetPrivateProfileStringW(lpSection, szPath, NULL, szBookmarks, BOOKMARKS_MAX * 32, g_Paths.sINI);
 	if(wcslen(szBookmarks) > 0){
@@ -5783,33 +5816,33 @@ static void LoadRecentBookmarks(wchar_t * lpSection, P_TPEDIT pE){
 			p1++;
 		}
 		//store lines count of rich edit
-		pE->lines = RichEdit_GetLineCount(pE->hEdit);
+		pE->lines = (int)SendMessage(pE->hEdit, EM_GETLINECOUNT, 0, 0L);
 		//recheck boockmarks - there may be less lines, than needed (for example, deleted by other program)
 		RecheckBookmarks(pE);
 	}
 }
 
-static void ConstructINIKey(wchar_t * lpPath, wchar_t * lpLongName){
+static void ConstructINIKey(wchar_t * lpPath, size_t cchPath, wchar_t * lpLongName){
 	//construct key for INI file depending on program location
 	if(!m_RemovableDrive){
 		//program is running from fixed drive - build key with real MAC address
-		wcscpy(lpPath, m_MACAddress);
-		wcscat(lpPath, DELIMETER);
-		wcscat(lpPath, lpLongName);
+		StringCchCopyW(lpPath, cchPath, m_MACAddress);
+		StringCchCatW(lpPath, cchPath, DELIMETER);
+		StringCchCatW(lpPath, cchPath, lpLongName);
 	}
 	else{
 		//program is running from removable drive
 		if(m_DriveLetter[0] == lpLongName[0]){
 			//the path is from removable drive as well - construct key with "dummy" MAC address
-			wcscpy(lpPath, REMOVABLE_MAC);
-			wcscat(lpPath, DELIMETER);
-			wcscat(lpPath, lpLongName);
+			StringCchCopyW(lpPath, cchPath, REMOVABLE_MAC);
+			StringCchCatW(lpPath, cchPath, DELIMETER);
+			StringCchCatW(lpPath, cchPath, lpLongName);
 		}
 		else{
 			//the path is from fixed drive - construct key with real MAC address
-			wcscpy(lpPath, m_MACAddress);
-			wcscat(lpPath, DELIMETER);
-			wcscat(lpPath, lpLongName);
+			StringCchCopyW(lpPath, cchPath, m_MACAddress);
+			StringCchCatW(lpPath, cchPath, DELIMETER);
+			StringCchCatW(lpPath, cchPath, lpLongName);
 		}
 	}
 }
@@ -5820,22 +5853,22 @@ static void SetTrayTip(void){
 	
 	//construct tray tooltip
 	pE = GetActiveHandle();
-	wcscpy(szTip, PROGRAM_NAME);
-	wcscat(szTip, L" ");
+	SAFE_WCSCPY(szTip, PROGRAM_NAME);
+	SAFE_WCSCAT(szTip, L" ");
 	MultiByteToWideChar(CP_ACP, 0, m_Version, -1, szBuffer, 128);
-	wcscat(szTip, szBuffer);
-	wcscat(szTip, L"\n");
-	wcscat(szTip, g_Strings.sDocsTotal);
-	wcscat(szTip, L" ");
-	_itow(TabCtrl_GetItemCount(m_hTabMain), szBuffer, 10);
-	wcscat(szTip, szBuffer);
-	wcscat(szTip, L"\n");
-	wcscat(szTip, g_Strings.sDocsCurrent);
-	wcscat(szTip, L" ");
+	SAFE_WCSCAT(szTip, szBuffer);
+	SAFE_WCSCAT(szTip, L"\n");
+	SAFE_WCSCAT(szTip, g_Strings.sDocsTotal);
+	SAFE_WCSCAT(szTip, L" ");
+	_itow_s(TabCtrl_GetItemCount(m_hTabMain), szBuffer, ARRAYSIZE(szBuffer), 10);
+	SAFE_WCSCAT(szTip, szBuffer);
+	SAFE_WCSCAT(szTip, L"\n");
+	SAFE_WCSCAT(szTip, g_Strings.sDocsCurrent);
+	SAFE_WCSCAT(szTip, L" ");
 	if(pE){
-		wcscat(szTip, pE->szShortName);
+		SAFE_WCSCAT(szTip, pE->szShortName);
 	}
-	wcscpy(m_nData.szTip, szTip);
+	SAFE_WCSCPY(m_nData.szTip, szTip);
 }
 
 static void GetMACAddress(void){
@@ -5844,7 +5877,7 @@ static void GetMACAddress(void){
 	char				szMAC[32];
 
 	//set default MAC address - for case there is no MAC adapter ?
-	wcscpy(m_MACAddress, L"00-00-00-00-00-00");
+	SAFE_WCSCPY(m_MACAddress, L"00-00-00-00-00-00");
 	//initialize structure
 	pAdapterInfo = (PIP_ADAPTER_INFO)malloc(sizeof(IP_ADAPTER_INFO));
 	ulBuffLen = sizeof(IP_ADAPTER_INFO);
@@ -5858,7 +5891,7 @@ static void GetMACAddress(void){
 	if(GetAdaptersInfo(pAdapterInfo, &ulBuffLen) == NO_ERROR){
 		if(pAdapterInfo){
 			//get address of first adapter
-			sprintf(szMAC, "%02X-%02X-%02X-%02X-%02X-%02X", pAdapterInfo->Address[0], pAdapterInfo->Address[1], pAdapterInfo->Address[2], pAdapterInfo->Address[3], pAdapterInfo->Address[4], pAdapterInfo->Address[5]);
+			StringCchPrintfA(szMAC, ARRAYSIZE(szMAC), "%02X-%02X-%02X-%02X-%02X-%02X", pAdapterInfo->Address[0], pAdapterInfo->Address[1], pAdapterInfo->Address[2], pAdapterInfo->Address[3], pAdapterInfo->Address[4], pAdapterInfo->Address[5]);
 			//conver string to unicode
 			MultiByteToWideChar(CP_ACP, 0, szMAC, -1, m_MACAddress, 32);
 		}
@@ -5916,8 +5949,8 @@ static void ConvertCase(HWND hEdit, BOOL fToUpper){
 static void GetLanguageID(void){
 	wchar_t			szPath[MAX_PATH];
 
-	wcscpy(szPath, g_Paths.sLangDir);
-	wcscat(szPath, g_Paths.sLangFile);
+	SAFE_WCSCPY(szPath, g_Paths.sLangDir);
+	SAFE_WCSCAT(szPath, g_Paths.sLangFile);
 	//get language id
 	if(PathFileExistsW(szPath)){
 		g_Settings.langID = GetPrivateProfileIntW(S_LANG, L"id", 0x409, szPath);
@@ -5964,14 +5997,14 @@ static void DTFormat_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		EndDialog(hwnd, IDOK);
 		break;
 	case IDC_CMD_SHOW_DSMP:
-		wcscpy(szLang, g_Paths.sLangDir);
-		wcscat(szLang, g_Paths.sLangFile);
+		SAFE_WCSCPY(szLang, g_Paths.sLangDir);
+		SAFE_WCSCAT(szLang, g_Paths.sLangFile);
 		GetPrivateProfileStringW(S_STRINGS, L"date_mask_caption", L"Date format masks", szCaption, 256, szLang);
 		MessageBoxW(hwnd, g_pDFormats, szCaption, MB_OK);
 		break;
 	case IDC_CMD_SHOW_TSMP:
-		wcscpy(szLang, g_Paths.sLangDir);
-		wcscat(szLang, g_Paths.sLangFile);
+		SAFE_WCSCPY(szLang, g_Paths.sLangDir);
+		SAFE_WCSCAT(szLang, g_Paths.sLangFile);
 		GetPrivateProfileStringW(S_STRINGS, L"time_mask_caption", L"Time format masks", szCaption, 256, szLang);
 		MessageBoxW(hwnd, g_pTFormats, szCaption, MB_OK);
 		break;
@@ -6028,8 +6061,8 @@ static BOOL DTFormat_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 
 	g_TempDTFormats = g_DTFormats;
 
-	wcscpy(szLang, g_Paths.sLangDir);
-	wcscat(szLang, g_Paths.sLangFile);
+	SAFE_WCSCPY(szLang, g_Paths.sLangDir);
+	SAFE_WCSCAT(szLang, g_Paths.sLangFile);
 
 	GetPrivateProfileStringW(S_CONTROLS, L"1010", L"Date/time settings", szCaption, 256, szLang);
 	SetWindowTextW(hwnd, szCaption);
@@ -6073,19 +6106,19 @@ static void InsertDateTime(int type){
 	switch(type){
 	case 0:		//date and time
 		if(g_TempDTFormats.TimeFirst){
-			wcscpy(szBuffer, szTime);
-			wcscat(szBuffer, szDate);
+			SAFE_WCSCPY(szBuffer, szTime);
+			SAFE_WCSCAT(szBuffer, szDate);
 		}
 		else{
-			wcscpy(szBuffer, szDate);
-			wcscat(szBuffer, szTime);
+			SAFE_WCSCPY(szBuffer, szDate);
+			SAFE_WCSCAT(szBuffer, szTime);
 		}
 		break;
 	case 1:		//date
-		wcscpy(szBuffer, szDate);
+		SAFE_WCSCPY(szBuffer, szDate);
 		break;
 	case 2:		//time
-		wcscpy(szBuffer, szTime);
+		SAFE_WCSCPY(szBuffer, szTime);
 		break;
 	}
 	
@@ -6108,12 +6141,12 @@ static void SetShowDateTime(HWND hwnd){
 	GetDateFormatW(langID, 0, &st, g_TempDTFormats.DateFormat, szDate, 128);
 	GetTimeFormatW(langID, 0, &st, g_TempDTFormats.TimeFormat, szTime, 64);
 	if(g_TempDTFormats.TimeFirst){
-		wcscpy(szBuffer, szTime);
-		wcscat(szBuffer, szDate);
+		SAFE_WCSCPY(szBuffer, szTime);
+		SAFE_WCSCAT(szBuffer, szDate);
 	}
 	else{
-		wcscpy(szBuffer, szDate);
-		wcscat(szBuffer, szTime);
+		SAFE_WCSCPY(szBuffer, szDate);
+		SAFE_WCSCAT(szBuffer, szTime);
 	}
 	SetDlgItemTextW(hwnd, IDC_ST_DATE_PVW, szBuffer);
 }

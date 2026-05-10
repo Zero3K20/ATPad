@@ -26,6 +26,7 @@
 // #include <stdlib.h>
 #include <shellapi.h>
 #include <shlwapi.h>
+#include <strsafe.h>
 // #include <richedit.h>
 // #include <commdlg.h>
 // #include <dlgs.h>
@@ -73,5 +74,5 @@ void AddNotifyIcon(HWND hwnd, HINSTANCE hInstance, int iconID, NOTIFYICONDATAW *
 	lpnid->uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
 	lpnid->uCallbackMessage = WM_SHELLNOTIFY;
 	lpnid->hIcon = LoadIconW(hInstance, MAKEINTRESOURCEW(iconID));
-	wcscpy(lpnid->szTip, lpTooltip);
+	StringCchCopyW(lpnid->szTip, ARRAYSIZE(lpnid->szTip), lpTooltip);
 }

@@ -25,6 +25,7 @@
 #include <commctrl.h>
 #include <richedit.h>
 #include <stdlib.h>
+#include <strsafe.h>
 
 #include "horsplit.h"
 #include "main.h"
@@ -146,8 +147,8 @@ static LRESULT CALLBACK HSplit_WndProc (HWND hwnd, UINT msg, WPARAM wParam, LPAR
 		case TBNPM_INSERT_ASS_TAB:{
 			wchar_t		szLang[MAX_PATH];
 
-			wcscpy(szLang, g_Paths.sLangDir);
-			wcscat(szLang, g_Paths.sLangFile);
+			StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+			StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 			InsertTab(wParam, szLang, lParam);
 			return TRUE;
 		}
@@ -196,12 +197,12 @@ static LRESULT CALLBACK HSplit_WndProc (HWND hwnd, UINT msg, WPARAM wParam, LPAR
 		case TBNPM_INS_RES_STR:{
 			wchar_t			szBuffer[1024], szNumber[12];
 
-			wcscpy(szBuffer, g_Strings.sTotalFound);
-			wcscat(szBuffer, L" \"");
-			wcscat(szBuffer, g_SearchString);
-			wcscat(szBuffer, L"\": ");
-			_ltow(wParam, szNumber, 10);
-			wcscat(szBuffer, szNumber);
+			StringCchCopyW(szBuffer, ARRAYSIZE(szBuffer), g_Strings.sTotalFound);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L" \"");
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), g_SearchString);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L"\": ");
+			_ltow_s(wParam, szNumber, ARRAYSIZE(szNumber), 10);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), szNumber);
 			SendMessageW(m_hListFind, LB_INSERTSTRING, 0, (LPARAM)szBuffer);
 			return TRUE;
 		}
@@ -211,21 +212,21 @@ static LRESULT CALLBACK HSplit_WndProc (HWND hwnd, UINT msg, WPARAM wParam, LPAR
 			int				index, count;
 
 			p = (P_FRC_ITEM)lParam;
-			wcscpy(szBuffer, L"\"");
-			wcscat(szBuffer, (wchar_t *)wParam);
-			wcscat(szBuffer, L"\" (");
-			_ltow(p->row, szNumber, 10);
-			wcscat(szBuffer, szNumber);
-			wcscat(szBuffer, L", ");
-			_ltow(p->col, szNumber, 10);
-			wcscat(szBuffer, szNumber);
-			wcscat(szBuffer, L")");
+			StringCchCopyW(szBuffer, ARRAYSIZE(szBuffer), L"\"");
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), (wchar_t *)wParam);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L"\" (");
+			_ltow_s(p->row, szNumber, ARRAYSIZE(szNumber), 10);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), szNumber);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L", ");
+			_ltow_s(p->col, szNumber, ARRAYSIZE(szNumber), 10);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), szNumber);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L")");
 			*szLine = MAX_LINE_SIZE;
 			count = SendMessageW(p->hEdit, EM_GETLINE, SendMessageW(p->hEdit, EM_EXLINEFROMCHAR, 0, p->min), (LPARAM)szLine);
 			if(szLine[count - 1] == '\r' || szLine[count - 1] == '\n')
 				szLine[count - 1] = '\0';
-			wcscat(szBuffer, L"\t");
-			wcscat(szBuffer, szLine);
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), L"\t");
+			StringCchCatW(szBuffer, ARRAYSIZE(szBuffer), szLine);
 			index = SendMessageW(m_hListFind, LB_ADDSTRING, 0, (LPARAM)szBuffer);
 			SendMessageW(m_hListFind, LB_SETITEMDATA, index, (LPARAM)p);
 			return TRUE;
@@ -343,19 +344,19 @@ static LRESULT CALLBACK PlaceHolder_WndProc (HWND hwnd, UINT msg, WPARAM wParam,
 			case IDM_DEL_SNIPPET:
 			case IDM_INS_SNIPPET:
 			case IDM_EDIT_SNIPPET:
-				GetTooltip(szTooltip, m_AssMenus, NELEMS(m_AssMenus), lpnmhdr->idFrom);
+				GetTooltip(szTooltip, ARRAYSIZE(szTooltip), m_AssMenus, NELEMS(m_AssMenus), lpnmhdr->idFrom);
 				ttp = (TOOLTIPTEXTW *)lParam;
-				wcscpy(ttp->szText, szTooltip);
+				StringCchCopyW(ttp->szText, ARRAYSIZE(ttp->szText), szTooltip);
 				break;
 			case IDM_CLOSE_PANE:{
 				wchar_t		szLang[MAX_PATH], szId[32];
 				
-				_itow(lpnmhdr->idFrom, szId, 10);
-				wcscpy(szLang, g_Paths.sLangDir);
-				wcscat(szLang, g_Paths.sLangFile);
+				_itow_s(lpnmhdr->idFrom, szId, ARRAYSIZE(szId), 10);
+				StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+				StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 				GetPrivateProfileStringW(S_MENU, szId, L"Close", szTooltip, 128, szLang);
 				ttp = (TOOLTIPTEXTW *)lParam;
-				wcscpy(ttp->szText, szTooltip);
+				StringCchCopyW(ttp->szText, ARRAYSIZE(ttp->szText), szTooltip);
 				break;
 			}
 			}	
@@ -483,9 +484,9 @@ static BOOL PlaceHolder_OnCreate(HWND hwnd, LPCREATESTRUCT lpCreateStruct)
 	lvc.pszText = szBuffer;
 
 	lvc.cx = 240;
-	wcscpy(szBuffer, L"Name");
+	StringCchCopyW(szBuffer, ARRAYSIZE(szBuffer), L"Name");
 	SendMessageW(m_hListSnippets, LVM_INSERTCOLUMNW, 0, (LPARAM)&lvc);
-	wcscpy(szBuffer, L"Text");
+	StringCchCopyW(szBuffer, ARRAYSIZE(szBuffer), L"Text");
 	lvc.iSubItem = 1;
 	lvc.cx = 480;
 	SendMessageW(m_hListSnippets, LVM_INSERTCOLUMNW, 1, (LPARAM)&lvc);
@@ -526,7 +527,7 @@ static void InsertTab(int id, wchar_t * lpLang, int imgID){
 	wchar_t		szBuffer[128], szDefault[128], szKey[32];
 	RECT		rc;
 
-	_itow(id, szKey, 10);
+	_itow_s(id, szKey, ARRAYSIZE(szKey), 10);
 	ZeroMemory(&tci, sizeof(tci));
 	tci.mask = TCIF_PARAM | TCIF_IMAGE | TCIF_TEXT;
 	tci.iImage = imgID;
@@ -603,8 +604,8 @@ void ApplyPaneLanguage(void){
 	int			count;
 	wchar_t		szLang[MAX_PATH], szBuffer[256], szID[12];
 
-	wcscpy(szLang, g_Paths.sLangDir);
-	wcscat(szLang, g_Paths.sLangFile);
+	StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+	StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 	count = TabCtrl_GetItemCount(m_hTabHSplit);
 	ZeroMemory(&ti, sizeof(ti));
 	ti.mask = TCIF_TEXT | TCIF_PARAM;
@@ -612,7 +613,7 @@ void ApplyPaneLanguage(void){
 	ti.cchTextMax = 128;
 	for(int i = 0; i < count; i++){
 		SendMessageW(m_hTabHSplit, TCM_GETITEMW, i, (LPARAM)&ti);
-		_itow(ti.lParam, szID, 10);
+		_itow_s(ti.lParam, szID, ARRAYSIZE(szID), 10);
 		GetPrivateProfileStringW(S_MENU, szID, szBuffer, szBuffer, 128, szLang);
 		SendMessageW(m_hTabHSplit, TCM_SETITEMW, i, (LPARAM)&ti);
 	}
@@ -624,7 +625,7 @@ void ApplyPaneLanguage(void){
 	for(int i = 0; i < 2; i++){
 		lvc.iSubItem = i;
 		SendMessageW(m_hListSnippets, LVM_GETCOLUMNW, i, (LPARAM)&lvc);
-		_itow(i, szID, 10);
+		_itow_s(i, szID, ARRAYSIZE(szID), 10);
 		GetPrivateProfileStringW(S_SNIPPETS_COLS, szID, L"Column", szBuffer, 256, szLang);
 		SendMessageW(m_hListSnippets, LVM_SETCOLUMNW, i, (LPARAM)&lvc);
 	}
@@ -676,7 +677,7 @@ static void PrepareAssMenuRecursive(HMENU hMenu, wchar_t * lpLangFile){
 				PrepareAssMenuRecursive(mi.hSubMenu, lpLangFile);
 			}
 
-			GetMIText(m_AssMenus, NELEMS(m_AssMenus), mi.wID, szDefault);
+			GetMIText(m_AssMenus, NELEMS(m_AssMenus), mi.wID, szDefault, ARRAYSIZE(szDefault));
 			SetMenuText(mi.wID, S_MENU, lpLangFile, szDefault, szText);
 			SetMIText(m_AssMenus, NELEMS(m_AssMenus), mi.wID, szText);
 			pmi = GetMItem(m_AssMenus, NELEMS(m_AssMenus), mi.wID);
@@ -733,10 +734,14 @@ static void Snippets_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		if((int)GetPropW(hwnd, L"edit") > 0 || !SnippetExists(szName)){
 			LVITEMW		lvi;
 			int			size = GetWindowTextLengthW(GetDlgItem(hwnd, IDC_EDT_SNP_TEXT));
-			wchar_t		szText[size + 1], szSize[256];
+			wchar_t		*szText;
+			wchar_t		szSize[256];
 			int			index = ListView_GetItemCount(m_hListSnippets);
 
-			_itow(size, szSize, 10);
+			szText = malloc(sizeof(wchar_t) * (size + 1));
+			if(!szText)
+				return;
+			_itow_s(size, szSize, ARRAYSIZE(szSize), 10);
 			GetDlgItemTextW(hwnd, IDC_EDT_SNP_TEXT, szText, size + 1);
 			ReplaceCRLFForward(szText);
 			WritePrivateProfileStringW(szName, L"size", szSize, g_Paths.sSnippetsPath);
@@ -757,6 +762,7 @@ static void Snippets_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 			lvi.pszText = szText;
 			ReplaceCRLFBySpace(szText);
 			SendMessageW(m_hListSnippets, LVM_SETITEMW, 0, (LPARAM)&lvi);
+			free(szText);
 			RemovePropW(hwnd, L"edit");
 			EndDialog(hwnd, IDOK);
 		}
@@ -783,8 +789,8 @@ static BOOL Snippets_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 	LVITEMW			lvi;
 	int				size;
 
-	wcscpy(szLang, g_Paths.sLangDir);
-	wcscat(szLang, g_Paths.sLangFile);
+	StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+	StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 	GetPrivateProfileStringW(S_CONTROLS, L"1009", L"Add/Edit Snippet", szBuffer, 128, szLang);
 	SetWindowTextW(hwnd, szBuffer);
 	SetControlText(hwnd, IDOK, L"OK", szLang);
@@ -805,10 +811,14 @@ static BOOL Snippets_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 		SetDlgItemTextW(hwnd, IDC_EDT_SNP_NAME, szBuffer);
 		size = GetPrivateProfileIntW(szBuffer, L"size", 0, g_Paths.sSnippetsPath);
 		if(size > 0){
-			wchar_t		szText[size + 1];
+			wchar_t		*szText;
+			szText = malloc(sizeof(wchar_t) * (size + 1));
+			if(!szText)
+				return FALSE;
 			GetPrivateProfileStringW(szBuffer, L"text", NULL, szText, size + 1, g_Paths.sSnippetsPath);
 			ReplaceCRLFBackward(szText);
 			SetDlgItemTextW(hwnd, IDC_EDT_SNP_TEXT, szText);
+			free(szText);
 		}
 	}
 	else{
@@ -880,19 +890,23 @@ static void LoadSnippets(void){
 			if(*pw && *pw != 31888){
 				size = GetPrivateProfileIntW(pw, L"size", 0, g_Paths.sSnippetsPath);
 				if(size > 0){
-					wchar_t		szText[size + 1];
-					GetPrivateProfileStringW(pw, L"text", NULL, szText, size + 1, g_Paths.sSnippetsPath);
-					index = ListView_GetItemCount(m_hListSnippets);
-					ZeroMemory(&lvi, sizeof(lvi));
-					lvi.mask = LVIF_IMAGE | LVIF_TEXT;
-					lvi.iImage = 5;
-					lvi.pszText = pw;
-					lvi.iItem = index;
-					SendMessageW(m_hListSnippets, LVM_INSERTITEMW, 0, (LPARAM)&lvi);
-					lvi.iSubItem = 1;
-					lvi.pszText = szText;
-					ReplaceCRLFBySpace(szText);
-					SendMessageW(m_hListSnippets, LVM_SETITEMW, 0, (LPARAM)&lvi);
+					wchar_t		*szText;
+					szText = malloc(sizeof(wchar_t) * (size + 1));
+					if(szText){
+						GetPrivateProfileStringW(pw, L"text", NULL, szText, size + 1, g_Paths.sSnippetsPath);
+						index = ListView_GetItemCount(m_hListSnippets);
+						ZeroMemory(&lvi, sizeof(lvi));
+						lvi.mask = LVIF_IMAGE | LVIF_TEXT;
+						lvi.iImage = 5;
+						lvi.pszText = pw;
+						lvi.iItem = index;
+						SendMessageW(m_hListSnippets, LVM_INSERTITEMW, 0, (LPARAM)&lvi);
+						lvi.iSubItem = 1;
+						lvi.pszText = szText;
+						ReplaceCRLFBySpace(szText);
+						SendMessageW(m_hListSnippets, LVM_SETITEMW, 0, (LPARAM)&lvi);
+						free(szText);
+					}
 				}
 			}
 			while(*pw++)
@@ -932,11 +946,15 @@ static void InsertSnippet(void){
 	SendMessageW(m_hListSnippets, LVM_GETITEMW, 0, (LPARAM)&lvi);
 	size = GetPrivateProfileIntW(szBuffer, L"size", 0, g_Paths.sSnippetsPath);
 	if(size > 0){
-		wchar_t		szText[size + 1];
+		wchar_t		*szText;
+		szText = malloc(sizeof(wchar_t) * (size + 1));
+		if(!szText)
+			return;
 		GetPrivateProfileStringW(szBuffer, L"text", NULL, szText, size + 1, g_Paths.sSnippetsPath);
 		ReplaceCRLFBackward(szText);
 		SendMessageW(hEdit, EM_REPLACESEL, TRUE, (LPARAM)szText);
 		SetFocus(hEdit);
+		free(szText);
 	}
 }
 

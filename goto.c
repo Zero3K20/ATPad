@@ -23,6 +23,7 @@
 #include <windowsx.h>
 #include <commdlg.h>
 #include <richedit.h>
+#include <strsafe.h>
 #include <stdlib.h>
 
 #include "goto.h"
@@ -129,8 +130,8 @@ static BOOL Goto_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 	HWND		hEdit;
 	CHARRANGE	chrg;
 
-	wcscpy(szLang, g_Paths.sLangDir);
-	wcscat(szLang, g_Paths.sLangFile);
+	StringCchCopyW(szLang, ARRAYSIZE(szLang), g_Paths.sLangDir);
+	StringCchCatW(szLang, ARRAYSIZE(szLang), g_Paths.sLangFile);
 	GetPrivateProfileStringW(S_CONTROLS, L"1005", L"Go To", szCaption, 128, szLang);
 	SetWindowTextW(hwnd, szCaption);
 	SetControlText(hwnd, IDC_ST_GOTO, L"Go to line:", szLang);
@@ -161,5 +162,4 @@ static BOOL Goto_OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 	}
 	return FALSE;
 }
-
 

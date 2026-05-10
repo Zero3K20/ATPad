@@ -17,6 +17,7 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <commctrl.h>
+#include <strsafe.h>
 #include "linklabel.h"
 
 #define	LL_CLASS		"_agLinkLabel_"
@@ -101,6 +102,7 @@ HWND CreateLinkLableW(HWND hParent, HINSTANCE hInstance, wchar_t * lpText, int x
 
 static void SetLLText(HWND hwnd, char * lpText){
 	char		* pText;
+	size_t		textLen;
 	SIZE		sz;
 	HDC			hdc;
 	int			state;
@@ -109,8 +111,9 @@ static void SetLLText(HWND hwnd, char * lpText){
 	pText = (char *)GetWindowLongPtr(hwnd, 0);
 	if(pText)
 		free(pText);
-	pText = (char *)calloc(strlen(lpText) + 1, sizeof(char));
-	strcpy(pText, lpText);
+	textLen = strlen(lpText);
+	pText = (char *)calloc(textLen + 1, sizeof(char));
+	StringCchCopyA(pText, textLen + 1, lpText);
 	SetWindowLongPtr(hwnd, 0, (LONG_PTR)pText);
 	hdc = GetDC(hwnd);
 	state = SaveDC(hdc);
@@ -134,7 +137,7 @@ static void SetLLTextW(HWND hwnd, wchar_t * lpText){
 	if(pText)
 		free(pText);
 	pText = (wchar_t *)calloc(wcslen(lpText) + 1, sizeof(wchar_t));
-	wcscpy(pText, lpText);
+	StringCchCopyW(pText, wcslen(lpText) + 1, lpText);
 	SetWindowLongPtrW(hwnd, 0, (LONG_PTR)pText);
 	hdc = GetDC(hwnd);
 	state = SaveDC(hdc);
@@ -181,7 +184,7 @@ static BOOL LLabel_OnCreate(HWND hwnd, LPCREATESTRUCT lpCreateStruct)
 		plfW->lfCharSet = 1;
 		plfW->lfUnderline = TRUE;
 		plfW->lfHeight = -MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
-		wcscpy(plfW->lfFaceName, L"MS Sans Serif");
+		StringCchCopyW(plfW->lfFaceName, ARRAYSIZE(plfW->lfFaceName), L"MS Sans Serif");
 		SetWindowLongPtrW(hwnd, 4, (LONG_PTR)plfW);
 	}
 	else{
@@ -189,7 +192,7 @@ static BOOL LLabel_OnCreate(HWND hwnd, LPCREATESTRUCT lpCreateStruct)
 		plf->lfCharSet = 1;
 		plf->lfUnderline = TRUE;
 		plf->lfHeight = -MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
-		strcpy(plf->lfFaceName, "MS Sans Serif");
+		StringCchCopyA(plf->lfFaceName, ARRAYSIZE(plf->lfFaceName), "MS Sans Serif");
 		SetWindowLongPtr(hwnd, 4, (LONG_PTR)plf);
 	}
 	ReleaseDC(hwnd, hdc);
@@ -243,4 +246,3 @@ static void LLabel_OnPaint(HWND hwnd)
 	DeleteObject(hFont);
 	EndPaint(hwnd, &ps);
 }
-

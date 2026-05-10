@@ -21,12 +21,13 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <mapi.h>
+#include <strsafe.h>
 
 static void ReplaceExtention(char * lpSource, char * lpDest);
 
 static ULONG (PASCAL *SendMAPIMail)(ULONG, ULONG_PTR, MapiMessage*, FLAGS, ULONG);
 
-BOOL SendAsAttachment(HWND hParent, wchar_t * lpAttachment, wchar_t * lpSubject, wchar_t * lpTemp){
+BOOL SendAsAttachment(HWND hParent, wchar_t * lpAttachment, wchar_t * lpSubject, wchar_t * lpTemp, size_t cchTemp){
 
 	HINSTANCE 		hMAPI;
 	char			szFileName[MAX_PATH], szPath[MAX_PATH], szSubject[MAX_PATH], szTempANSI[MAX_PATH];
@@ -55,11 +56,11 @@ BOOL SendAsAttachment(HWND hParent, wchar_t * lpAttachment, wchar_t * lpSubject,
 		WideCharToMultiByte(CP_ACP, 0, szTempFileName, -1, szTempANSI, MAX_PATH, NULL, NULL);
 		ReplaceExtention(szFileName, szTempANSI);
 		MultiByteToWideChar(CP_ACP, 0, szTempANSI, -1, szTempFileName, MAX_PATH);
-		strcpy(szFileName, szTempANSI);
+		StringCchCopyA(szFileName, ARRAYSIZE(szFileName), szTempANSI);
 		CopyFileW(lpAttachment, szTempFileName, FALSE);
-		wcscpy(lpTemp, szTempFileName);
+		StringCchCopyW(lpTemp, cchTemp, szTempFileName);
 	}
-	strcpy(szPath, szFileName);
+	StringCchCopyA(szPath, ARRAYSIZE(szPath), szFileName);
 	if(lpSubject){
 		WideCharToMultiByte(CP_ACP, 0, lpSubject, -1, szSubject, MAX_PATH, NULL, NULL);
 	}

@@ -22,6 +22,7 @@
 #include <windows.h>
 #include <commctrl.h>
 #include <richedit.h>
+#include <strsafe.h>
 
 #include "stringconstants.h"
 #include "globalvars.h"
@@ -64,7 +65,7 @@ void SetMenuText(int id, const wchar_t * lcpSection, const wchar_t * lcpFile, wc
 
 	wchar_t 		szId[12];
 
-	_itow(id, szId, 10);
+	_itow_s(id, szId, ARRAYSIZE(szId), 10);
 	GetPrivateProfileStringW(lcpSection, szId, lpDefault, lpBuffer, 256, lcpFile);
 }
 
@@ -78,11 +79,11 @@ PMItem GetMItem(PMItem	lpMI, const int size, int id){
 	return NULL;
 }
 
-void GetMIText(MItem * lpMI, const int size, int id, wchar_t * lpText){
+void GetMIText(MItem * lpMI, const int size, int id, wchar_t * lpText, size_t cchText){
 
 	for(int i = 0; i < size; i++){
 		if(lpMI->id == id){
-			wcscpy(lpText, lpMI->szText);
+			StringCchCopyW(lpText, cchText, lpMI->szText);
 			break;
 		}
 		lpMI++;
@@ -93,19 +94,19 @@ void SetMIText(MItem * lpMI, const int size, int id, const wchar_t * lpText){
 
 	for(int i = 0; i < size; i++){
 		if(lpMI->id == id){
-			wcscpy(lpMI->szText, lpText);
+			StringCchCopyW(lpMI->szText, ARRAYSIZE(lpMI->szText), lpText);
 			break;
 		}
 		lpMI++;
 	}
 }
 
-void GetTooltip(wchar_t * lpTip, PMItem pItems, int size, UINT id){
+void GetTooltip(wchar_t * lpTip, size_t cchTip, PMItem pItems, int size, UINT id){
 	//erase string
-	*lpTip = '\0';
+	StringCchCopyW(lpTip, cchTip, L"");
 	for(int i = 0; i < size; i++, pItems++){
 		if(pItems->id == id){
-			wcscpy(lpTip, pItems->szText);
+			StringCchCopyW(lpTip, cchTip, pItems->szText);
 			break;
 		}
 	}
@@ -228,7 +229,7 @@ void SetControlText(HWND hwnd, int id, wchar_t * lpDefault, wchar_t * lpLangFile
 	wchar_t			szBuffer[512], szKey[16];
 
 	//set control text according to language file value
-	_itow(id, szKey, 10);
+	_itow_s(id, szKey, ARRAYSIZE(szKey), 10);
 	GetPrivateProfileStringW(S_CONTROLS, szKey, lpDefault, szBuffer, 512, lpLangFile);
 	SetDlgItemTextW(hwnd, id, szBuffer);
 }
@@ -238,18 +239,18 @@ void DrawLineNumbersRegular(HWND hwnd, HDC hdc, TPSETTINGS settings, GCOLORTYPE 
 	RECT		rc, rcLine, rcMargin, rcBookmark, rcLeft, rcRight;
 	HDC			hdcTemp;
 	HBITMAP		hbm, hbmOld;
-	HFONT		hOldF;
+	HFONT		hOldF = NULL;
 	COLORREF	cOldC;
 	wchar_t		szNumber[32];
 	POINT		pt;
-	HBRUSH		hBrush, hBrBm;
+	HBRUSH		hBrush = NULL, hBrBm = NULL;
 	long		first, last, temp, pos, charIndex, line, count;
 	HICON		hBmIcon;
 
 	//get bookmark icon
 	hBmIcon = ImageList_GetIcon(g_ImlTab, 3, ILD_TRANSPARENT);
 	//get total lines count
-	count = RichEdit_GetLineCount(hwnd);
+	count = (int)SendMessage(hwnd, EM_GETLINECOUNT, 0, 0L);
 	SetBkMode(hdc, TRANSPARENT);
 	//get formatting rectangle
 	SendMessageW(hwnd, EM_GETRECT, 0, (LPARAM)&rc);
@@ -378,7 +379,8 @@ void DrawLineNumbersRegular(HWND hwnd, HDC hdc, TPSETTINGS settings, GCOLORTYPE 
 	if(settings.showLines){
 		if(lnformat.cBack.sysIndex == -1)
 			DeleteObject(hBrush);
-		SelectObject(hdcTemp, hOldF);
+		if(hOldF)
+			SelectObject(hdcTemp, hOldF);
 		SetTextColor(hdcTemp, cOldC);
 	}
 	SelectObject(hdcTemp, hbmOld);
@@ -392,17 +394,17 @@ void DrawLineNumbersWrap(HWND hwnd, HDC hdc, TPSETTINGS settings, GCOLORTYPE ctB
 	RECT		rc, rcLine, rcMargin, rcLeft, rcRight, rcBookmark;
 	HDC			hdcTemp;
 	HBITMAP		hbm, hbmOld;
-	HFONT		hOldF;
+	HFONT		hOldF = NULL;
 	COLORREF	cOldC;
 	wchar_t		szNumber[32];
 	POINT		pt;
-	HBRUSH		hBrush, hBrBm;
+	HBRUSH		hBrush = NULL, hBrBm = NULL;
 	long		first, last, temp, pos, charIndex, line, count;
 	TEXTRANGEW	trg;
 	wchar_t		szChar[2];
 	BOOL		drawWrap = FALSE;
 	long		crCount = 0, addition = 0, start;
-	HANDLE		pTemp;
+	HANDLE		pTemp = NULL;
 	HICON		hIcon = NULL, hBmIcon = NULL;
 
 	//get bookmark icon
@@ -410,7 +412,7 @@ void DrawLineNumbersWrap(HWND hwnd, HDC hdc, TPSETTINGS settings, GCOLORTYPE ctB
 	//get wrap icon
 	hIcon = ImageList_GetIcon(hIml, ImageList_GetImageCount(hIml) - 1, ILD_TRANSPARENT);
 	//get total lines count
-	count = RichEdit_GetLineCount(hwnd);
+	count = (int)SendMessage(hwnd, EM_GETLINECOUNT, 0, 0L);
 	SetBkMode(hdc, TRANSPARENT);
 	//get control formatting rectangle
 	SendMessageW(hwnd, EM_GETRECT, 0, (LPARAM)&rc);
@@ -604,7 +606,8 @@ void DrawLineNumbersWrap(HWND hwnd, HDC hdc, TPSETTINGS settings, GCOLORTYPE ctB
 	if(settings.showLines){
 		if(lnformat.cBack.sysIndex == -1)
 			DeleteObject(hBrush);
-		SelectObject(hdcTemp, hOldF);
+		if(hOldF)
+			SelectObject(hdcTemp, hOldF);
 		SetTextColor(hdcTemp, cOldC);
 	}
 	SelectObject(hdcTemp, hbmOld);
@@ -623,10 +626,10 @@ void DrawCRLFWhiteSpace(HWND hwnd, BOOL fPreview, TPSETTINGS settings, GCOLORTYP
 	long		pos, count, last, cnt;
 	POINT		pt;
 	TEXTRANGEW	trg;
-	HANDLE		pTemp;
+	HANDLE		pTemp = NULL;
 	BITMAP		bmCR, bmLF;
-	HPEN		hPen, hPenOld = NULL;
-	HPEN		hPSpace;
+	HPEN		hPen = NULL, hPenOld = NULL;
+	HPEN		hPSpace = NULL;
 	HRGN		hRgn;
 	wchar_t		* pChar;
 
@@ -673,7 +676,7 @@ void DrawCRLFWhiteSpace(HWND hwnd, BOOL fPreview, TPSETTINGS settings, GCOLORTYP
 		pos = SendMessageW(hwnd, EM_CHARFROMPOS, 0, (LPARAM)&rc);
 		trg.chrg.cpMax = pos;
 		last = SendMessageW(hwnd, EM_EXLINEFROMCHAR, 0, pos);
-		count = RichEdit_GetLineCount(hwnd);
+		count = (int)SendMessage(hwnd, EM_GETLINECOUNT, 0, 0L);
 		if(count - last == 2){
 			trg.chrg.cpMax++;
 		}
@@ -721,7 +724,8 @@ void DrawCRLFWhiteSpace(HWND hwnd, BOOL fPreview, TPSETTINGS settings, GCOLORTYP
 			SendMessageW(hwnd, EM_POSFROMCHAR, (WPARAM)&pt, i);
 			pt.y += (textHeight - 1) / 2;
 			if(i < trg.chrg.cpMax){
-				SelectObject(hdc, hPen);
+				if(hPen)
+					SelectObject(hdc, hPen);
 				SendMessageW(hwnd, EM_POSFROMCHAR, (WPARAM)&pt1, i + 1);
 				MoveToEx(hdc, pt.x + 1, pt.y, NULL);
 				LineTo(hdc, pt1.x - 1, pt.y);
@@ -737,7 +741,8 @@ void DrawCRLFWhiteSpace(HWND hwnd, BOOL fPreview, TPSETTINGS settings, GCOLORTYP
 			SendMessageW(hwnd, EM_POSFROMCHAR, (WPARAM)&pt, i);
 			pt.y += (textHeight - 1) / 2;
 			if(i < trg.chrg.cpMax){
-				SelectObject(hdc, hPSpace);
+				if(hPSpace)
+					SelectObject(hdc, hPSpace);
 				SendMessageW(hwnd, EM_POSFROMCHAR, (WPARAM)&pt1, i + 1);
 				MoveToEx(hdc, pt.x + (pt1.x - pt.x) / 2 - 1, pt.y - 1, NULL);
 				LineTo(hdc, pt.x + (pt1.x - pt.x) / 2 + 1, pt.y);
@@ -748,10 +753,13 @@ void DrawCRLFWhiteSpace(HWND hwnd, BOOL fPreview, TPSETTINGS settings, GCOLORTYP
 		trg.lpstrText++;
 	}
 	if(!fPreview){
-		HeapFree(g_hHeap, 0, pTemp);
+		if(pTemp)
+			HeapFree(g_hHeap, 0, pTemp);
 	}
 	if(settings.showWS){
-		SelectObject(hdc, hPenOld);
+		//can stay NULL when showing only CR/LF without tabs/spaces
+		if(hPenOld)
+			SelectObject(hdc, hPenOld);
 		if(settings.showTabs)
 			DeleteObject(hPen);
 		if(settings.showSpaces)
@@ -904,7 +912,7 @@ void GetCurrentPositionRegular(HWND hEdit, CHARRANGE chrg, long * px, long * py)
 	gtx.flags = GTL_NUMCHARS | GTL_PRECISE;
 	gtx.codepage = 1200;
 	charCount = SendMessageW(hEdit, EM_GETTEXTLENGTHEX, (WPARAM)&gtx, 0);
-	count = RichEdit_GetLineCount(hEdit);
+	count = (int)SendMessage(hEdit, EM_GETLINECOUNT, 0, 0L);
 	SendMessageW(hEdit, EM_GETRECT, 0, (LPARAM)&rc);
 	rc.top = rc.bottom;
 	pos = SendMessageW(hEdit, EM_CHARFROMPOS, 0, (LPARAM)&rc);
@@ -935,7 +943,7 @@ void GetCurrentPositionWrap(HWND hEdit, CHARRANGE chrg, long * px, long * py){
 	gtx.flags = GTL_NUMCHARS | GTL_PRECISE;
 	gtx.codepage = 1200;
 	charCount = SendMessageW(hEdit, EM_GETTEXTLENGTHEX, (WPARAM)&gtx, 0);
-	count = RichEdit_GetLineCount(hEdit);
+	count = (int)SendMessage(hEdit, EM_GETLINECOUNT, 0, 0L);
 	
 	//find last visible line start position
 	SendMessageW(hEdit, EM_GETRECT, 0, (LPARAM)&rc);
