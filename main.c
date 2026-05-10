@@ -878,8 +878,8 @@ static void Main_OnInitMenuPopup(HWND hwnd, HMENU hMenu, UINT item, BOOL fSystem
 	P_TPEDIT		pE;
 	HMENU			h1 = NULL;
 	HMENU 			h2 = NULL;
-	int				editMenuPos;
-	int				refreshMenuPos;
+	int				editMenuPos = -1;
+	int				refreshMenuPos = -1;
 
 	if(g_hMenu){
 		editMenuPos = GetMenuPosition(g_hMenu, IDM_EDIT);
