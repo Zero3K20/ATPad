@@ -876,11 +876,25 @@ static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 static void Main_OnInitMenuPopup(HWND hwnd, HMENU hMenu, UINT item, BOOL fSystemMenu)
 {
 	P_TPEDIT		pE;
-	HMENU			h1 = GetSubMenu(g_hMenu, GetMenuPosition(g_hMenu, IDM_EDIT));
-	HMENU 			h2 = GetSubMenu(h1, GetMenuPosition(h1, IDM_REFRESH_EVERY));
+	HMENU			h1 = NULL;
+	HMENU 			h2 = NULL;
+	int				menuPos;
+
+	if(g_hMenu){
+		menuPos = GetMenuPosition(g_hMenu, IDM_EDIT);
+		if(menuPos >= 0){
+			h1 = GetSubMenu(g_hMenu, menuPos);
+			if(h1){
+				menuPos = GetMenuPosition(h1, IDM_REFRESH_EVERY);
+				if(menuPos >= 0){
+					h2 = GetSubMenu(h1, menuPos);
+				}
+			}
+		}
+	}
 
 	PrepareMenuGradientColors(GetSysColor(COLOR_BTNFACE));
-	if(hMenu == h2){
+	if(h2 && hMenu == h2){
 		pE = GetActiveHandle();
 		if(pE){
 			if(pE->status == ST_FILE){
@@ -4265,6 +4279,9 @@ static VOID CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT idEvent, DWORD dwTime)
 		return;
 	}
 	pE = GetActiveHandle();
+	if(!pE){
+		return;
+	}
 	if(pE->bookmarks){
 		EnableMenuItem(g_hMenu, IDM_BM_NEXT, MF_BYCOMMAND | MF_ENABLED);
 		EnableMenuItem(g_hMenu, IDM_BM_PREV, MF_BYCOMMAND | MF_ENABLED);
