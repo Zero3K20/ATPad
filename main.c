@@ -1139,7 +1139,7 @@ static BOOL Main_OnCreate(HWND hwnd, LPCREATESTRUCT lpCreateStruct)
 	clStruct.idFirstChild = 1;
 	g_hClient = CreateWindowExW(0, MDI_CLIENT_CLASS, NULL, WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | WS_CLIPCHILDREN, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, hwnd, NULL, g_hInstance, &clStruct);
 	//create toolbar
-	m_hTbrMain = CreateWindowExW(0, TOOLBARCLASSNAMEW, NULL, WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS | TBSTYLE_TRANSPARENT, 0, 0, CW_USEDEFAULT, CW_USEDEFAULT, hwnd, NULL, g_hInstance, NULL);
+	m_hTbrMain = CreateWindowExW(0, TOOLBARCLASSNAMEW, NULL, WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS, 0, 0, CW_USEDEFAULT, CW_USEDEFAULT, hwnd, NULL, g_hInstance, NULL);
 	m_hTTToolbar = (HWND)SendMessageW(m_hTbrMain, TB_GETTOOLTIPS, 0, 0);
 	CreateImageListsW(&m_ImlNormal, &m_ImlGray, g_hInstance, IDB_IML_NORMAL, IDB_IML_GRAY, CLR_MASK, 16, 16, 0);
 	DoToolbarW(m_hTbrMain, m_ImlNormal, m_ImlGray, NELEMS(m_TBBtnArray), m_TBBtnArray);
